@@ -1,0 +1,8 @@
+﻿
+pip install mypy
+
+mypy check_type_ng.py
+
+python check_type_ng.py
+
+

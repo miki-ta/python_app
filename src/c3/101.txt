@@ -1,0 +1,19 @@
+﻿
+colors = { "red", "green", "blue" }
+colors
+
+e = set()
+e
+
+fruits = set({"orange", "banana", "mango"})
+fruits
+
+
+box1 = {'ハンマー', '釘', 'ペンチ'}
+box2 = {'釘', 'ペンチ'}
+box1 - box2
+
+
+box3 = {'ハンマー', '釘', 'ペンチ'}
+'ペンチ' in box3
+

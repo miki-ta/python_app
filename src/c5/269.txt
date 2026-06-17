@@ -1,0 +1,6 @@
+﻿
+prompt = "(masterpiece), tiger in the garden, Monet's style"
+
+image = generate_image(prompt, "sd_image2.png", 878783)
+display_png(image)
+

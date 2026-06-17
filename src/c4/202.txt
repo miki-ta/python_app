@@ -1,0 +1,16 @@
+﻿
+re.search(r"ba*", "b")
+
+re.search(r"ba+", "baaaaaaa")
+
+
+
+re.search(r"ba{1,3}", "baaaaaaaaaaaaa")
+
+
+
+s = "青巻紙赤巻紙黄巻紙"
+re.findall(r".+紙", s)
+
+re.findall(r".+?紙", s)
+['青巻紙', '赤巻紙', '黄巻紙']

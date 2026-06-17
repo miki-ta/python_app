@@ -1,0 +1,2 @@
+﻿
+python test-syaku2.py

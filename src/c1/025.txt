@@ -1,0 +1,9 @@
+﻿
+cd
+cd C:\Users\kujira\sample
+
+
+
+cd ~/sample
+ls
+python hello.py

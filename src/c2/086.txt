@@ -1,0 +1,14 @@
+type(30)
+
+type(5.2)
+
+type("abc")
+
+
+
+v = 30
+v.__add__(5)
+v.bit_length()
+
+dir(30)
+

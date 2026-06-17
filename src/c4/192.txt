@@ -1,0 +1,2 @@
+﻿
+python findtext.py def

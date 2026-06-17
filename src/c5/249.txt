@@ -1,0 +1,2 @@
+﻿
+python cifar10-test.py
