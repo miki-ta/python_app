@@ -1,0 +1,8 @@
+{
+  "items": [
+    {"category": "受電対応", "title": "挨拶と名乗り", "description": "30秒以内に名乗り、用件を伺う。"},
+    {"category": "受電対応", "title": "保留の取り方", "description": "お待ちいただく理由を伝えてから保留にする。"},
+    {"category": "営業対応", "title": "クロージング手順", "description": "提案→利点確認→次のアクション合意。"},
+    {"category": "トラブル対応", "title": "エスカレーション基準", "description": "解決見込みが30分以上か不明な場合は上長へ報告。"}
+  ]
+}
