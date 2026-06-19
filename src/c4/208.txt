@@ -1,5 +1,0 @@
-﻿python nest-list-c1.py
-
-python nest-list-c2.py
-
-python nest-list-c3.py

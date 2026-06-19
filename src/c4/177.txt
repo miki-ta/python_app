@@ -1,4 +1,0 @@
-﻿
-pip install pillow qrcode
-
-pip install -U pip
