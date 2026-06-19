@@ -1,2 +1,0 @@
-﻿
-python hello10-rec.py

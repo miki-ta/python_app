@@ -1,2 +1,0 @@
-﻿
-python sum-args.py

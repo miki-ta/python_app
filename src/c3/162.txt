@@ -1,4 +1,0 @@
-﻿
-python type_hint-calc.py
-
-
