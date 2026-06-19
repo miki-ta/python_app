@@ -1,4 +1,4 @@
-# コールセンター勤怠管理システム コパイロット作成
+# コールセンター勤怠管理システム
 
 from datetime import datetime, timedelta
 
