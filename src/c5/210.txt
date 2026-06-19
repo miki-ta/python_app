@@ -1,2 +1,0 @@
-﻿
-python dialog-file.py

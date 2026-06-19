@@ -1,2 +1,0 @@
-﻿
-python wine-train.py
