@@ -1,5 +1,0 @@
-﻿
-print('I can\'t play the guitar.')
-
-
-print("I like \"Orange\". ")

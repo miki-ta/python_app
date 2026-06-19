@@ -1,2 +1,0 @@
-﻿
-python draw_num.py

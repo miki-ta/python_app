@@ -1,3 +1,0 @@
-﻿
-tensorboard --logdir=logs_wine
-

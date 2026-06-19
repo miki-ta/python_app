@@ -1,3 +1,0 @@
-﻿
-
-python if-cafe.py

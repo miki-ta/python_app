@@ -1,4 +1,0 @@
-﻿
-python print-args.py
-
-python print-args.py aaa bbb ccc

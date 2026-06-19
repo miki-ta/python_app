@@ -1,3 +1,0 @@
-﻿
-python wine-train2.py
-
