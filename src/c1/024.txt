@@ -1,4 +1,0 @@
-﻿
-cd c:\sample
-ls
-python hello.py
