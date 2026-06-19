@@ -1,3 +1,0 @@
-﻿
-
-http://localhost:8080/cgi-bin/show-params.py?mode=test&n=30&q=500

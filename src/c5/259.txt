@@ -1,3 +1,0 @@
-﻿
-tensorboard --logdir <プログラム配置パス>logs_wine
-
