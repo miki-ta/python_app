@@ -1,3 +1,0 @@
-﻿
-
-python ct-to-g.py

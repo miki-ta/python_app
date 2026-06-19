@@ -1,2 +1,0 @@
-﻿
-python inch-to-cm-input.py
