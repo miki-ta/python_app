@@ -1,4 +1,4 @@
-# 【実践1】実用的な例：BMI計算機
+# 【実践1】実用的な例：BMI計算機 
 def calculate_bmi(height, weight):
     """
     身長(m)と体重(kg)を受け取ってBMIを計算する
