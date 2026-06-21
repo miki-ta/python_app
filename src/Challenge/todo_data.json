@@ -1,0 +1,114 @@
+[
+  {
+    "title": "GITへのアップデート",
+    "due_date": "2026-06-21",
+    "priority": "高",
+    "memo": "フィーチャーリポジトリへアップデート",
+    "done": false,
+    "sort_order": 1
+  },
+  {
+    "title": "TODO　スクロール機能追加",
+    "due_date": "2026-06-21",
+    "priority": "高",
+    "memo": "画面が見切れてしまうため",
+    "done": true,
+    "sort_order": 2
+  },
+  {
+    "title": "TODO　ソート追加",
+    "due_date": "2026-06-21",
+    "priority": "高",
+    "memo": "日付順と優先度順",
+    "done": true,
+    "sort_order": 3
+  },
+  {
+    "title": "BMIと体脂肪率のAPP化",
+    "due_date": "2026-06-23",
+    "priority": "高",
+    "memo": "使いやすいように実走",
+    "done": true,
+    "sort_order": 4
+  },
+  {
+    "title": "BMIと体脂肪率のプログラム",
+    "due_date": "2026-06-23",
+    "priority": "高",
+    "memo": "プログラムを書く",
+    "done": true,
+    "sort_order": 5
+  },
+  {
+    "title": "BMIと体脂肪率のプログラム",
+    "due_date": "2026-06-23",
+    "priority": "高",
+    "memo": "プログラムを読む練習",
+    "done": true,
+    "sort_order": 6
+  },
+  {
+    "title": "Pythonの教科書",
+    "due_date": "2026-06-23",
+    "priority": "高",
+    "memo": "第３章全部",
+    "done": false,
+    "sort_order": 7
+  },
+  {
+    "title": "Pythonの教科書",
+    "due_date": "2026-06-23",
+    "priority": "高",
+    "memo": "３章の前半の復習",
+    "done": true,
+    "sort_order": 8
+  },
+  {
+    "title": "TODOプログラムの完成",
+    "due_date": "2026-06-23",
+    "priority": "高",
+    "memo": "アプリ化して実走",
+    "done": true,
+    "sort_order": 9
+  },
+  {
+    "title": "TODOリストのAPP 化",
+    "due_date": "2026-06-23",
+    "priority": "高",
+    "memo": "使いやすいAPPを実走",
+    "done": true,
+    "sort_order": 10
+  },
+  {
+    "title": "プログラムの練習",
+    "due_date": "2026-06-23",
+    "priority": "高",
+    "memo": "読めるように勉強",
+    "done": false,
+    "sort_order": 11
+  },
+  {
+    "title": "親戚と食事",
+    "due_date": "2026-06-21",
+    "priority": "中",
+    "memo": "11：30に駐車場待ち合わせ",
+    "done": false,
+    "sort_order": 12
+  },
+  {
+    "title": "スキルブーストクロードの項目",
+    "due_date": "2026-06-30",
+    "priority": "中",
+    "memo": "",
+    "done": false,
+    "sort_order": 13
+  },
+  {
+    "title": "スキルブーストＡＩ項目",
+    "due_date": "2026-06-30",
+    "priority": "中",
+    "memo": "",
+    "done": false,
+    "sort_order": 14
+  }
+]
