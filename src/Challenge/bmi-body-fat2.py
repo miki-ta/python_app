@@ -1,4 +1,4 @@
-"""BMIと体脂肪率から判定とワンポイントアドバイスを出すデスクトップアプリ。""" 
+"""BMIと体脂肪率から判定とワンポイントアドバイスを出すデスクトップアプリ。"""  
 
 import tkinter as tk
 from tkinter import messagebox, ttk
