@@ -1,4 +1,4 @@
-"""体重・身長・体脂肪率からBMI判定とワンポイントアドバイスを表示するデスクトップアプリ。""" 
+"""体重・身長・体脂肪率からBMI判定とワンポイントアドバイスを表示するデスクトップアプリ。"""
 
 import tkinter as tk
 from tkinter import messagebox, ttk
@@ -174,7 +174,7 @@ main_frame.pack(fill="both", expand=True)
 ttk.Label(main_frame, text="BMI・体脂肪率 判定アプリ", style="Title.TLabel").pack(anchor="w")
 description_label = ttk.Label(
     main_frame,
-    text="体重・身長・体脂肪率を入力すると、BMI判定結果と体脂肪率を考慮したアドバイスを表示します。",
+    text="体重・身長・体脂肪率を入力すると、BMI判定結果と体脂肪率を考慮したアドバイスを表示します",
     wraplength=560,
     justify="left",
 )
