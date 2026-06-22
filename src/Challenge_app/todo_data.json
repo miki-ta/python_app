@@ -1,9 +1,106 @@
 [
   {
-    "title": "Pythonの教科書第３章",
+    "title": "Pythonの教科書",
     "due_date": "2026-06-23",
     "priority": "高",
-    "memo": "２回目読む",
-    "done": false
+    "memo": "第３章後半",
+    "done": false,
+    "sort_order": 1
+  },
+  {
+    "title": "TODOプログラム修正",
+    "due_date": "2026-06-23",
+    "priority": "高",
+    "memo": "未完了に戻すボタンを完了画面の上部に移動。",
+    "done": true,
+    "sort_order": 2
+  },
+  {
+    "title": "TODOプログラムの修正",
+    "due_date": "2026-06-23",
+    "priority": "高",
+    "memo": "画面の横幅を縮める",
+    "done": true,
+    "sort_order": 3
+  },
+  {
+    "title": "親戚と食事",
+    "due_date": "2026-06-21",
+    "priority": "中",
+    "memo": "11：30に駐車場待ち合わせ",
+    "done": true,
+    "sort_order": 4
+  },
+  {
+    "title": "ギットハブのアップロード",
+    "due_date": "2026-06-22",
+    "priority": "高",
+    "memo": "TODOリスト２",
+    "done": false,
+    "sort_order": 5
+  },
+  {
+    "title": "プログラムを読む練習",
+    "due_date": "2026-06-23",
+    "priority": "高",
+    "memo": "",
+    "done": false,
+    "sort_order": 6
+  },
+  {
+    "title": "スキルブーストAI講習",
+    "due_date": "2026-06-30",
+    "priority": "高",
+    "memo": "",
+    "done": false,
+    "sort_order": 7
+  },
+  {
+    "title": "スキルブーストクロード講習",
+    "due_date": "2026-06-30",
+    "priority": "高",
+    "memo": "",
+    "done": false,
+    "sort_order": 8
+  },
+  {
+    "title": "TODOリスト履歴確認",
+    "due_date": "2026-06-23",
+    "priority": "高",
+    "memo": "TODOで入力すると、TODO２も上書きされる",
+    "done": false,
+    "sort_order": 9
+  },
+  {
+    "title": "クロードの２時間動画再視聴",
+    "due_date": "2026-06-30",
+    "priority": "高",
+    "memo": "将来やりたい作業を具体化",
+    "done": false,
+    "sort_order": 10
+  },
+  {
+    "title": "Pythonの教科書",
+    "due_date": "2026-06-30",
+    "priority": "高",
+    "memo": "第４章",
+    "done": false,
+    "sort_order": 11
+  },
+  {
+    "title": "Pythonの教科書",
+    "due_date": "2026-07-07",
+    "priority": "高",
+    "memo": "第５章",
+    "done": false,
+    "sort_order": 12
+  },
+  {
+    "title": "Pythonの教科書",
+    "due_date": "2026-07-14",
+    "priority": "高",
+    "memo": "第６章",
+    "done": false,
+    "sort_order": 13
   }
 ]
