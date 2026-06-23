@@ -18,7 +18,7 @@ import unicodedata
 
 
 # タスク履歴を保存するJSONファイル
-DATA_FILE = Path(__file__).with_name("todo_data.json")
+DATA_FILE = Path(__file__).with_name("todo_data1.json")
 
 
 @dataclass
