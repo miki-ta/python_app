@@ -24,19 +24,11 @@
     "sort_order": 3
   },
   {
-    "title": "親戚と食事",
-    "due_date": "2026-06-21",
-    "priority": "中",
-    "memo": "11：30に駐車場待ち合わせ",
-    "done": true,
-    "sort_order": 4
-  },
-  {
     "title": "ギットハブのアップロード",
     "due_date": "2026-06-22",
     "priority": "高",
     "memo": "TODOリスト２",
-    "done": false,
+    "done": true,
     "sort_order": 5
   },
   {
@@ -44,7 +36,7 @@
     "due_date": "2026-06-23",
     "priority": "高",
     "memo": "",
-    "done": false,
+    "done": true,
     "sort_order": 6
   },
   {
@@ -102,5 +94,13 @@
     "memo": "第６章",
     "done": false,
     "sort_order": 13
+  },
+  {
+    "title": "TODO2の期限切れ確認",
+    "due_date": "2026-06-23",
+    "priority": "高",
+    "memo": "期限切れになった際に日付が消えないか",
+    "done": false,
+    "sort_order": 15
   }
 ]

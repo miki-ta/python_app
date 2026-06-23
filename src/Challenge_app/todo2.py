@@ -166,6 +166,7 @@ class TodoApp:
 
 		self.tasks = load_tasks()
 		# 画面で選択状態を持つためのチェック管理リスト
+		self.overdue_checks: list[tuple[int, tk.BooleanVar]] = []
 		self.todo_checks: list[tuple[int, tk.BooleanVar]] = []
 		self.done_checks: list[tuple[int, tk.BooleanVar]] = []
 		# 編集中タスクのインデックス。未編集時は None。
@@ -176,6 +177,8 @@ class TodoApp:
 		# モノスペースフォントをチェックボタン用スタイルに登録
 		style = ttk.Style()
 		style.configure("Mono.TCheckbutton", font=("MS Gothic", 10))
+		# 期限切れタスク用のスタイル（赤文字）
+		style.configure("Overdue.TCheckbutton", font=("MS Gothic", 10), foreground="red")
 
 		self._build_ui()
 		self.refresh_task_view()
@@ -185,6 +188,7 @@ class TodoApp:
 		parent: tk.Widget,
 		title: str,
 		pady: tuple[int, int] = (0, 0),
+		height: int | None = None,
 		top_widget_builder=None,
 	) -> tuple[ttk.LabelFrame, tk.Canvas, ttk.Frame]:
 		frame = ttk.LabelFrame(parent, text=title, padding=0)
@@ -196,13 +200,16 @@ class TodoApp:
 			top_widget_builder(top_bar)
 
 		canvas = tk.Canvas(frame, highlightthickness=0, borderwidth=0)
+		if height is not None:
+			canvas.configure(height=height)
+			canvas.pack(side="left", fill="both", expand=False)
+		else:
+			canvas.pack(side="left", fill="both", expand=True)
+		
 		scrollbar = ttk.Scrollbar(frame, orient="vertical", command=canvas.yview)
 		content = ttk.Frame(canvas, padding=10)
-
 		content_window = canvas.create_window((0, 0), window=content, anchor="nw")
 		canvas.configure(yscrollcommand=scrollbar.set)
-
-		canvas.pack(side="left", fill="both", expand=True)
 		scrollbar.pack(side="right", fill="y")
 
 		# 中身のサイズ変化に合わせてスクロール範囲と表示幅を更新する。
@@ -260,7 +267,6 @@ class TodoApp:
 		ttk.Button(buttons, text="選択を編集", command=self.edit_selected_task).pack(side="left", padx=8)
 		ttk.Button(buttons, text="選択を一括完了", command=self.complete_selected).pack(side="left", padx=8)
 		ttk.Button(buttons, text="選択を削除", command=self.delete_selected).pack(side="left", padx=8)
-		ttk.Button(buttons, text="完了選択を削除", command=self.delete_selected_done).pack(side="left", padx=8)
 		ttk.Label(buttons, text="並び替え").pack(side="left", padx=(8, 2))
 		self.sort_box = ttk.Combobox(
 			buttons,
@@ -276,38 +282,69 @@ class TodoApp:
 		self.cancel_edit_button = ttk.Button(buttons, text="編集解除", command=self.cancel_edit, state="disabled")
 		self.cancel_edit_button.pack(side="left", padx=8)
 
-		# 下部エリア: 未完了と完了の2つの一覧を表示する。
+		# 下部エリア: 期限切れ、未完了、完了の3つの一覧を表示する。
 		main = ttk.Frame(self.root)
 		main.pack(fill="both", expand=True, padx=10, pady=(0, 10))
 
+		self.overdue_frame, self.overdue_canvas, self.overdue_content = self._build_scrollable_section(
+			main,
+			"期限切れ（チェックで完了）",
+			height=90,
+		)
 		self.todo_frame, self.todo_canvas, self.todo_content = self._build_scrollable_section(
 			main,
 			"未完了（チェックで一括完了）",
+			pady=(8, 0),
 		)
+		def build_done_top_buttons(parent: ttk.Frame) -> None:
+			ttk.Button(
+				parent,
+				text="未完了に戻す",
+				command=self.restore_selected_done,
+			).pack(side="left")
+			ttk.Button(
+				parent,
+				text="完了選択を削除",
+				command=self.delete_selected_done,
+			).pack(side="left", padx=8)
+
 		self.done_frame, self.done_canvas, self.done_content = self._build_scrollable_section(
 			main,
 			"完了",
 			pady=(8, 0),
-			top_widget_builder=lambda parent: ttk.Button(
-				parent,
-				text="未完了に戻す",
-				command=self.restore_selected_done,
-			).pack(side="left"),
+			top_widget_builder=build_done_top_buttons,
 		)
 
 	def refresh_task_view(self) -> None:
 		# 画面再描画の前に一覧を空にする。
+		for child in self.overdue_content.winfo_children():
+			child.destroy()
 		for child in self.todo_content.winfo_children():
 			child.destroy()
 		for child in self.done_content.winfo_children():
 			child.destroy()
 
+		self.overdue_checks = []
 		self.todo_checks = []
 		self.done_checks = []
+		overdue_count = 0
 		todo_count = 0
 		done_count = 0
-		todo_indexes, done_indexes = self._sorted_task_indexes()
+		overdue_indexes, todo_indexes, done_indexes = self._sorted_task_indexes()
 
+		# 期限切れタスクを表示
+		for row_no, idx in enumerate(overdue_indexes, start=1):
+			task = self.tasks[idx]
+			line = self._task_line(row_no, task)
+			# チェック状態は BooleanVar で保持する。
+			var = tk.BooleanVar(value=False)
+			# 期限切れタスクは赤文字で表示
+			chk = ttk.Checkbutton(self.overdue_content, text=line, variable=var, style="Overdue.TCheckbutton")
+			chk.pack(fill="x", pady=2)
+			self.overdue_checks.append((idx, var))
+			overdue_count += 1
+
+		# 未完了タスクを表示
 		for row_no, idx in enumerate(todo_indexes, start=1):
 			task = self.tasks[idx]
 			line = self._task_line(row_no, task)
@@ -318,6 +355,7 @@ class TodoApp:
 			self.todo_checks.append((idx, var))
 			todo_count += 1
 
+		# 完了タスクを表示
 		for row_no, idx in enumerate(done_indexes, start=1):
 			task = self.tasks[idx]
 			line = self._task_line(row_no, task)
@@ -327,12 +365,16 @@ class TodoApp:
 			self.done_checks.append((idx, var))
 			done_count += 1
 
+		# 各グループが空の場合は空状態メッセージを表示
+		if overdue_count == 0:
+			ttk.Label(self.overdue_content, text="期限切れタスクはありません", foreground="gray").pack(anchor="w")
 		if todo_count == 0:
 			# 件数0のときは空状態メッセージを表示する。
 			ttk.Label(self.todo_content, text="未完了タスクはありません", foreground="gray").pack(anchor="w")
 		if done_count == 0:
 			ttk.Label(self.done_content, text="完了タスクはありません", foreground="gray").pack(anchor="w")
 
+		self.overdue_canvas.yview_moveto(0)
 		self.todo_canvas.yview_moveto(0)
 		self.done_canvas.yview_moveto(0)
 
@@ -367,13 +409,36 @@ class TodoApp:
 	def add_or_update_task(self) -> None:
 		# 入力欄の値を取り出し、余分な空白を削る。
 		title = self.title_entry.get().strip()
-		due = self.due_var.get().strip() or "-"
+		raw_due = self.due_var.get().strip()
+		# 更新時に期限入力が空なら、既存の期限を保持して消失を防ぐ。
+		if self.editing_index is not None and not raw_due:
+			due = self.tasks[self.editing_index].due_date
+		else:
+			due = raw_due or "-"
 		priority = self.priority_box.get().strip() or "中"
 		memo = self.memo_entry.get().strip()
 
 		if not title:
 			messagebox.showwarning("入力エラー", "タイトルは必須です。")
 			return
+
+		# 期限日が指定されており、かつ過去の日付でないかチェック。
+		if due != "-":
+			try:
+				# YYYY-MM-DD 形式の文字列を date オブジェクトに変換。
+				due_date = date.fromisoformat(due)
+				today = date.today()
+				# 期限日が今日より前（過去）の場合はエラーにする。
+				if due_date < today:
+					messagebox.showerror(
+						"期限日エラー",
+						f"期限日は今日以降の日付を指定してください。\n（選択日付: {due}, 今日: {today}）",
+					)
+					return
+			except ValueError:
+				# 日付の形式が不正な場合もエラーにする。
+				messagebox.showerror("期限日エラー", "期限日の形式が不正です。")
+				return
 
 		# editing_index が None なら新規追加、そうでなければ更新。
 		if self.editing_index is None:
@@ -413,7 +478,7 @@ class TodoApp:
 
 	def edit_selected_task(self) -> None:
 		# 編集は "1件だけ選択" を必須にする。
-		selected_indexes = [idx for idx, var in self.todo_checks if var.get()]
+		selected_indexes = [idx for idx, var in self.overdue_checks if var.get()] + [idx for idx, var in self.todo_checks if var.get()]
 		if len(selected_indexes) != 1:
 			messagebox.showinfo("確認", "編集するタスクを1件だけチェックしてください。")
 			return
@@ -449,8 +514,8 @@ class TodoApp:
 			self.priority_box.set("中")
 
 	def complete_selected(self) -> None:
-		# 未完了一覧でチェックされたものを完了済みに変更する。
-		selected_indexes = [idx for idx, var in self.todo_checks if var.get()]
+		# 期限切れ、未完了一覧でチェックされたものを完了済みに変更する。
+		selected_indexes = [idx for idx, var in self.overdue_checks if var.get()] + [idx for idx, var in self.todo_checks if var.get()]
 		if not selected_indexes:
 			messagebox.showinfo("確認", "完了にするタスクをチェックしてください。")
 			return
@@ -465,7 +530,7 @@ class TodoApp:
 
 	def delete_selected(self) -> None:
 		# 後ろから削除し、インデックスずれを防ぐ。
-		selected_indexes = [idx for idx, var in self.todo_checks if var.get()]
+		selected_indexes = [idx for idx, var in self.overdue_checks if var.get()] + [idx for idx, var in self.todo_checks if var.get()]
 		if not selected_indexes:
 			messagebox.showinfo("確認", "削除するタスクをチェックしてください。")
 			return
@@ -478,10 +543,14 @@ class TodoApp:
 		self.refresh_task_view()
 
 	def select_all(self) -> None:
+		for _, var in self.overdue_checks:
+			var.set(True)
 		for _, var in self.todo_checks:
 			var.set(True)
 
 	def clear_selection(self) -> None:
+		for _, var in self.overdue_checks:
+			var.set(False)
 		for _, var in self.todo_checks:
 			var.set(False)
 		for _, var in self.done_checks:
@@ -551,13 +620,35 @@ class TodoApp:
 			return self._priority_sort_key
 		return self._input_sort_key
 
-	def _sorted_task_indexes(self) -> tuple[list[int], list[int]]:
+	def _sorted_task_indexes(self) -> tuple[list[int], list[int], list[int]]:
 		sort_key = self._current_sort_key()
-		todo_indexes = [idx for idx, task in enumerate(self.tasks) if not task.done]
+		today = date.today()
+		
+		# 期限切れ: 未完了で、期限が設定されており、かつ今日より前のタスク
+		overdue_indexes = []
+		todo_indexes = []
 		done_indexes = [idx for idx, task in enumerate(self.tasks) if task.done]
+		
+		for idx, task in enumerate(self.tasks):
+			if task.done:
+				continue
+			
+			# 期限が設定されており、過去の日付なら期限切れ
+			if task.due_date != "-":
+				try:
+					due_date = date.fromisoformat(task.due_date)
+					if due_date < today:
+						overdue_indexes.append(idx)
+						continue
+				except ValueError:
+					pass
+			
+			todo_indexes.append(idx)
+		
+		overdue_indexes.sort(key=lambda idx: sort_key(self.tasks[idx]))
 		todo_indexes.sort(key=lambda idx: sort_key(self.tasks[idx]))
 		done_indexes.sort(key=lambda idx: sort_key(self.tasks[idx]))
-		return todo_indexes, done_indexes
+		return overdue_indexes, todo_indexes, done_indexes
 
 	def on_sort_changed(self, _event=None) -> None:
 		self.cancel_edit()
