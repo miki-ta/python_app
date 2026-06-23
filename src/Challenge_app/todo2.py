@@ -38,13 +38,26 @@ def load_tasks() -> list[Task]:
 		# JSON を読み込み、Task のリストへ変換する。
 		with DATA_FILE.open("r", encoding="utf-8") as f:
 			items = json.load(f)
+		if not isinstance(items, list):
+			raise TypeError
 		tasks: list[Task] = []
+		skipped_count = 0
 		for idx, item in enumerate(items, start=1):
-			task = Task(**item)
-			# 古いデータで sort_order がない/不正でも入力順を復元する。
-			if task.sort_order <= 0:
-				task.sort_order = idx
-			tasks.append(task)
+			try:
+				task = Task(**item)
+				# 古いデータで sort_order がない/不正でも入力順を復元する。
+				if task.sort_order <= 0:
+					task.sort_order = idx
+				tasks.append(task)
+			except (TypeError, ValueError):
+				# 1件だけ壊れていても他のタスクは読み込めるようにする。
+				skipped_count += 1
+
+		if skipped_count > 0:
+			messagebox.showwarning(
+				"一部読み込みエラー",
+				f"{skipped_count}件のタスクを読み込めませんでした。\n他のタスクは読み込み済みです。",
+			)
 		return tasks
 	except (OSError, json.JSONDecodeError, TypeError, ValueError):
 		# ファイル破損などで読めないときは警告し、空リストで続行する。
@@ -52,7 +65,7 @@ def load_tasks() -> list[Task]:
 		return []
 
 
-def save_tasks(tasks: list[Task]) -> None:
+def save_tasks(tasks: list[Task]) -> bool:
 	def safe_text(text: str) -> str:
 		# 不正な文字が混ざっても保存処理で落ちないように置き換える。
 		return text.encode("utf-8", errors="replace").decode("utf-8")
@@ -67,9 +80,14 @@ def save_tasks(tasks: list[Task]) -> None:
 		item["memo"] = safe_text(task.memo)
 		items.append(item)
 
-	# ensure_ascii=False により日本語をそのまま保存する。
-	with DATA_FILE.open("w", encoding="utf-8") as f:
-		json.dump(items, f, ensure_ascii=False, indent=2)
+	try:
+		# ensure_ascii=False により日本語をそのまま保存する。
+		with DATA_FILE.open("w", encoding="utf-8") as f:
+			json.dump(items, f, ensure_ascii=False, indent=2)
+		return True
+	except OSError:
+		messagebox.showerror("保存エラー", "保存に失敗しました。\nディスク容量や権限を確認してください。")
+		return False
 
 
 class DatePickerDialog:
@@ -202,7 +220,7 @@ class TodoApp:
 		canvas = tk.Canvas(frame, highlightthickness=0, borderwidth=0)
 		if height is not None:
 			canvas.configure(height=height)
-			canvas.pack(side="left", fill="both", expand=False)
+			canvas.pack(side="left", fill="both", expand=True)
 		else:
 			canvas.pack(side="left", fill="both", expand=True)
 		
@@ -238,9 +256,10 @@ class TodoApp:
 		self.due_entry = ttk.Entry(date_area, width=14, textvariable=self.due_var, state="readonly")
 		self.due_entry.pack(side="left")
 		ttk.Button(date_area, text="日付を選択", command=self.open_date_picker).pack(side="left")
+		ttk.Button(date_area, text="クリア", command=self.clear_due_date).pack(side="left", padx=(4, 0))
 
 		priority_area = ttk.Frame(form)
-		priority_area.grid(row=0, column=4, columnspan=2, sticky="w")
+		priority_area.grid(row=0, column=4, columnspan=2, sticky="w", padx=(16, 0))
 
 		ttk.Label(priority_area, text="優先度").pack(side="left")
 		self.priority_box = ttk.Combobox(
@@ -338,8 +357,13 @@ class TodoApp:
 			line = self._task_line(row_no, task)
 			# チェック状態は BooleanVar で保持する。
 			var = tk.BooleanVar(value=False)
-			# 期限切れタスクは赤文字で表示
-			chk = ttk.Checkbutton(self.overdue_content, text=line, variable=var, style="Overdue.TCheckbutton")
+			# 期限切れも未完了/完了と同じ表示項目（タイトル・期限・優先度・メモ）にそろえる。
+			chk = ttk.Checkbutton(
+				self.overdue_content,
+				text=line,
+				variable=var,
+				style="Overdue.TCheckbutton",
+			)
 			chk.pack(fill="x", pady=2)
 			self.overdue_checks.append((idx, var))
 			overdue_count += 1
@@ -403,6 +427,10 @@ class TodoApp:
 	def set_due_date(self, value: str) -> None:
 		self.due_var.set(value)
 
+	def clear_due_date(self) -> None:
+		# 期限日を未設定（"-"）として扱うため、入力欄を空に戻す。
+		self.due_var.set("")
+
 	def add_task(self) -> None:
 		self.add_or_update_task()
 
@@ -410,11 +438,7 @@ class TodoApp:
 		# 入力欄の値を取り出し、余分な空白を削る。
 		title = self.title_entry.get().strip()
 		raw_due = self.due_var.get().strip()
-		# 更新時に期限入力が空なら、既存の期限を保持して消失を防ぐ。
-		if self.editing_index is not None and not raw_due:
-			due = self.tasks[self.editing_index].due_date
-		else:
-			due = raw_due or "-"
+		due = raw_due or "-"
 		priority = self.priority_box.get().strip() or "中"
 		memo = self.memo_entry.get().strip()
 
@@ -466,7 +490,9 @@ class TodoApp:
 			message = "タスクを更新しました。"
 
 		# 保存 -> 編集状態解除 -> 再描画 の順で画面を最新化する。
-		save_tasks(self.tasks)
+		if not save_tasks(self.tasks):
+			self.refresh_task_view()
+			return
 		self.cancel_edit(clear_inputs=False)
 		self.refresh_task_view()
 		messagebox.showinfo("保存", message)
@@ -523,7 +549,9 @@ class TodoApp:
 		for idx in selected_indexes:
 			self.tasks[idx].done = True
 
-		save_tasks(self.tasks)
+		if not save_tasks(self.tasks):
+			self.refresh_task_view()
+			return
 		self.cancel_edit()
 		self.refresh_task_view()
 		messagebox.showinfo("完了", f"{len(selected_indexes)}件のタスクを完了にしました。")
@@ -538,7 +566,9 @@ class TodoApp:
 		for idx in sorted(selected_indexes, reverse=True):
 			del self.tasks[idx]
 
-		save_tasks(self.tasks)
+		if not save_tasks(self.tasks):
+			self.refresh_task_view()
+			return
 		self.cancel_edit()
 		self.refresh_task_view()
 
@@ -566,7 +596,9 @@ class TodoApp:
 		for idx in selected_indexes:
 			self.tasks[idx].done = False
 
-		save_tasks(self.tasks)
+		if not save_tasks(self.tasks):
+			self.refresh_task_view()
+			return
 		self.cancel_edit()
 		self.refresh_task_view()
 		messagebox.showinfo("戻す", f"{len(selected_indexes)}件のタスクを未完了に戻しました。")
@@ -580,7 +612,9 @@ class TodoApp:
 		for idx in sorted(selected_indexes, reverse=True):
 			del self.tasks[idx]
 
-		save_tasks(self.tasks)
+		if not save_tasks(self.tasks):
+			self.refresh_task_view()
+			return
 		self.cancel_edit()
 		self.refresh_task_view()
 
