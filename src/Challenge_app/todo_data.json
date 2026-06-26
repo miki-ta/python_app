@@ -102,5 +102,13 @@
     "memo": "期限切れになった際に日付が消えないか",
     "done": true,
     "sort_order": 15
+  },
+  {
+    "title": "ギットハブのアップロード",
+    "due_date": "2026-06-26",
+    "priority": "高",
+    "memo": "",
+    "done": false,
+    "sort_order": 16
   }
 ]

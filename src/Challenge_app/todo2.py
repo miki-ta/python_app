@@ -1,4 +1,4 @@
-"""チェックボックスで一括完了できる GUI ToDo アプリ。"""
+"""チェックボックスで一括完了できる GUI ToDo アプリ。""" 
 
 from dataclasses import asdict, dataclass
 import calendar
