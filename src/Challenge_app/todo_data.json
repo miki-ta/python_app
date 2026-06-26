@@ -60,7 +60,7 @@
     "due_date": "2026-06-23",
     "priority": "高",
     "memo": "TODOで入力すると、TODO２も上書きされる",
-    "done": false,
+    "done": true,
     "sort_order": 9
   },
   {
@@ -100,7 +100,7 @@
     "due_date": "2026-06-23",
     "priority": "高",
     "memo": "期限切れになった際に日付が消えないか",
-    "done": false,
+    "done": true,
     "sort_order": 15
   }
 ]
