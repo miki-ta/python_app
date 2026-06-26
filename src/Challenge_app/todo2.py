@@ -10,7 +10,7 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 
 
-DATA_FILE = Path(__file__).with_name("todo_data.json")
+DATA_FILE = Path(__file__).with_name("todo_data2.json")
 
 
 @dataclass
