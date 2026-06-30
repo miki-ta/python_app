@@ -1,5 +1,0 @@
-﻿
-python calc2.py
-
-
-python comment.py

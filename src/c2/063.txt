@@ -1,3 +1,0 @@
-﻿
-
-python calc-fee.py

@@ -1,6 +1,0 @@
-﻿
-python str-num-ok.py
-
-python renketu.py
-
-python inch-to-cm2.py

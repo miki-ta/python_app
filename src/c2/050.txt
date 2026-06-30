@@ -1,2 +1,0 @@
-﻿
-python f-string-fmt.py

@@ -1,4 +1,0 @@
-﻿
-python tokyo-osaka2.py
-
-python inch-to-cm.py
