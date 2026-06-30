@@ -1,0 +1,5 @@
+﻿
+! wget https://huggingface.co/TheBloke/Vicuna-7B-CoT-GGUF/resolve/main/vicuna-7b-cot.Q4_K_M.gguf
+pip install llama-cpp-python==0.2.70
+
+

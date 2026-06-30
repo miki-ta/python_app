@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ToDoアプリ 使い方ガイド</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --em:    #059669;
+      --em-lt: #10B981;
+      --em-dk: #047857;
+      --am:    #D97706;
+      --red:   #DC2626;
+      --slate: #0F172A;
+      --dark:  #1E293B;
+      --text:  #1E293B;
+      --muted: #64748B;
+      --surf:  #F0FDF4;
+      --bd:    #D1FAE5;
+    }
+
+    body {
+      font-family: "Helvetica Neue", Arial, "Hiragino Sans", "Yu Gothic", sans-serif;
+      background: #F8FAFC;
+      color: var(--text);
+      line-height: 1.75;
+      font-size: 16px;
+    }
+
+    /* ── TOP BAR ── */
+    .topbar {
+      background: var(--slate);
+      padding: 10px 36px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .tb-file {
+      background: var(--em);
+      color: white;
+      font-size: .72rem;
+      font-weight: 700;
+      padding: 3px 11px;
+      border-radius: 20px;
+    }
+    .tb-name { color: rgba(255,255,255,.75); font-size: .88rem; }
+    .tb-name strong { color: white; }
+    .tb-right { margin-left: auto; color: rgba(255,255,255,.4); font-size: .76rem; }
+
+    /* ── HERO ── */
+    .hero {
+      background: var(--slate);
+      padding: 64px 36px 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    .hero-kicker {
+      color: var(--em-lt);
+      font-size: .78rem;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      margin-bottom: 18px;
+    }
+    .hero h1 {
+      font-size: 2.6rem;
+      font-weight: 800;
+      color: white;
+      line-height: 1.2;
+      margin-bottom: 16px;
+    }
+    .hero h1 em { font-style: normal; color: var(--am); }
+    .hero-sub {
+      color: rgba(255,255,255,.6);
+      font-size: 1rem;
+      max-width: 480px;
+      margin-bottom: 28px;
+    }
+    .hero-chips {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .chip {
+      font-size: .8rem;
+      font-weight: 600;
+      padding: 5px 14px;
+      border-radius: 20px;
+    }
+    .chip-em   { background: rgba(16,185,129,.15); border: 1px solid rgba(16,185,129,.3); color: var(--em-lt); }
+    .chip-am   { background: rgba(245,158,11,.15);  border: 1px solid rgba(245,158,11,.3);  color: #F59E0B; }
+    .chip-gray { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.14); color: rgba(255,255,255,.55); }
+
+    /* ── COMMON ── */
+    .wrap { max-width: 920px; margin: 0 auto; padding: 0 32px; }
+    .band { padding: 60px 0; }
+    .section-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+      color: var(--em);
+      margin-bottom: 10px;
+    }
+    .section-tag::before {
+      content: '';
+      display: block;
+      width: 16px; height: 2px;
+      background: var(--em);
+    }
+    .section-tag.am { color: var(--am); }
+    .section-tag.am::before { background: var(--am); }
+    .section-tag.wh { color: rgba(255,255,255,.8); }
+    .section-tag.wh::before { background: rgba(255,255,255,.5); }
+    h2 { font-size: 1.7rem; font-weight: 800; color: var(--text); margin-bottom: 6px; line-height: 1.25; }
+    .lead { color: var(--muted); font-size: .97rem; margin-bottom: 32px; }
+    h2.white { color: white; }
+    .lead.white { color: rgba(255,255,255,.5); }
+
+    code {
+      background: #ECFDF5;
+      color: var(--em-dk);
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-family: "Consolas", "Courier New", monospace;
+      font-size: .86em;
+      font-weight: 600;
+    }
+
+    /* ── SCREENSHOT SECTION ── */
+    .screen-band { background: white; }
+    .sc-outer {
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 16px 48px rgba(0,0,0,.14);
+      border: 1px solid #CBD5E1;
+      margin-bottom: 28px;
+    }
+    .sc-bar {
+      background: #1E293B;
+      padding: 9px 16px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+    .dr { background: #FF5F57; }
+    .dy { background: #FFBD2E; }
+    .dg { background: #28C840; }
+    .sc-win-title { color: rgba(255,255,255,.4); font-size: .76rem; margin-left: 10px; }
+    .sc-img { display: block; width: 100%; height: auto; }
+
+    /* 注釈番号オーバーレイ用ラッパー */
+    .sc-annotate {
+      position: relative;
+      display: inline-block;
+      width: 100%;
+    }
+    .sc-annotate img { display: block; width: 100%; height: auto; }
+
+    /* 凡例 */
+    .legend-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    .leg {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      background: white;
+      border: 1.5px solid var(--bd);
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .leg-n {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .75rem; font-weight: 800;
+      color: white; flex-shrink: 0;
+      background: var(--em);
+    }
+    .leg-n.red { background: var(--red); }
+    .leg-n.am  { background: var(--am); }
+    .leg-n.gray { background: var(--muted); }
+    .leg-title { font-weight: 700; font-size: .88rem; color: var(--text); }
+    .leg-desc  { font-size: .8rem; color: var(--muted); }
+
+    /* ── CONTROLS SECTION ── */
+    .ctrl-band { background: var(--surf); }
+    .ctrl-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .ctrl-card {
+      background: white;
+      border: 1.5px solid var(--bd);
+      border-radius: 12px;
+      padding: 20px 22px;
+    }
+    .ctrl-card-title {
+      font-size: .8rem;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--em);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .ctrl-card-title::before {
+      content: '';
+      display: block;
+      width: 12px; height: 2px;
+      background: var(--em);
+    }
+    .ctrl-card-title.red-label { color: var(--red); }
+    .ctrl-card-title.red-label::before { background: var(--red); }
+    .ctrl-card-title.am-label { color: var(--am); }
+    .ctrl-card-title.am-label::before { background: var(--am); }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .btn-tag {
+      display: inline-block;
+      font-family: "Consolas", "Courier New", monospace;
+      font-size: .78rem;
+      font-weight: 700;
+      padding: 4px 11px;
+      border-radius: 5px;
+      border: 1.5px solid;
+    }
+    .btn-em   { background: #ECFDF5; color: var(--em-dk); border-color: var(--bd); }
+    .btn-gray { background: #F1F5F9; color: #475569;      border-color: #CBD5E1; }
+    .btn-red  { background: #FEF2F2; color: var(--red);   border-color: #FECACA; }
+    .btn-am   { background: #FFFBEB; color: #92400E;      border-color: #FDE68A; }
+
+    .field-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid #F1F5F9;
+      font-size: .88rem;
+    }
+    .field-row:last-child { border-bottom: none; }
+    .field-name {
+      font-weight: 700;
+      color: var(--dark);
+      white-space: nowrap;
+      min-width: 72px;
+    }
+    .field-desc { color: var(--muted); }
+
+    .task-preview {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-family: "MS Gothic", "Consolas", monospace;
+      font-size: .82rem;
+      color: var(--text);
+      line-height: 1.9;
+    }
+    .task-preview .overdue { color: var(--red); }
+
+    /* ── QUICKSTART ── */
+    .qs-band { background: white; border-top: 3px solid var(--em); }
+    .steps { display: flex; flex-direction: column; gap: 0; }
+    .step {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+      padding: 20px 0;
+      position: relative;
+    }
+    .step:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      left: 17px; top: 58px; bottom: 0;
+      width: 2px;
+      background: linear-gradient(to bottom, var(--bd), transparent);
+    }
+    .step-num {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: var(--surf);
+      border: 2px solid var(--em);
+      color: var(--em);
+      font-weight: 800; font-size: .95rem;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; position: relative; z-index: 1;
+    }
+    .step-body {
+      background: var(--surf);
+      border: 1.5px solid var(--bd);
+      border-radius: 10px;
+      padding: 18px 22px;
+      flex: 1;
+    }
+    .step-body h3 { font-size: 1rem; font-weight: 700; margin-bottom: 6px; color: var(--text); }
+    .step-body p  { font-size: .9rem; color: var(--muted); }
+    .folder-code {
+      background: white;
+      border: 1px solid #CBD5E1;
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-family: "Consolas", "Courier New", monospace;
+      font-size: .83rem;
+      color: #334155;
+      line-height: 2;
+      margin-top: 10px;
+    }
+    .fc-dir  { color: #2563EB; font-weight: 700; }
+    .fc-exe  { color: var(--em-dk); font-weight: 700; }
+    .fc-json { color: #7C3AED; }
+    .note {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      background: white;
+      border: 1px solid var(--bd);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: .85rem;
+      color: var(--em-dk);
+      margin-top: 10px;
+    }
+    .warn {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      background: #FFFBEB;
+      border: 1px solid #FDE68A;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: .85rem;
+      color: #92400E;
+      margin-top: 10px;
+    }
+
+    /* ── FEATURES ── */
+    .feat-band { background: var(--surf); }
+    .feat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 14px;
+    }
+    .feat {
+      background: white;
+      border: 1.5px solid var(--bd);
+      border-radius: 10px;
+      padding: 18px 16px;
+      transition: border-color .2s, transform .2s;
+    }
+    .feat:hover { border-color: var(--em); transform: translateY(-2px); }
+    .feat-icon {
+      width: 40px; height: 40px;
+      border-radius: 9px;
+      background: var(--surf);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem;
+      margin-bottom: 10px;
+    }
+    .feat h3 { font-size: .92rem; font-weight: 700; margin-bottom: 5px; color: var(--text); }
+    .feat p  { font-size: .82rem; color: var(--muted); line-height: 1.65; }
+
+    /* ── STATUS / PRIORITY ── */
+    .sp-band { background: var(--slate); }
+    .sp-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+    }
+    .sp-col-hd {
+      font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+      color: rgba(255,255,255,.4); margin-bottom: 12px;
+    }
+    .sp-list { display: flex; flex-direction: column; gap: 8px; }
+    .sp-item {
+      display: flex; align-items: center; gap: 12px;
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 10px;
+      padding: 12px 16px;
+    }
+    .sp-icon {
+      width: 38px; height: 38px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; flex-shrink: 0;
+    }
+    .spi-red  { background: rgba(220,38,38,.15); border: 2px solid rgba(220,38,38,.3); color: #F87171; }
+    .spi-em   { background: rgba(16,185,129,.15); border: 2px solid rgba(16,185,129,.3); color: #34D399; }
+    .spi-gray { background: rgba(100,116,139,.15); border: 2px solid rgba(100,116,139,.3); color: #94A3B8; }
+    .sp-name { font-weight: 700; color: white; font-size: .92rem; }
+    .sp-desc { font-size: .8rem; color: rgba(255,255,255,.4); }
+    .pri-badge {
+      width: 36px; height: 36px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: .88rem; flex-shrink: 0;
+    }
+    .pb-h { background: rgba(220,38,38,.15); border: 2px solid rgba(220,38,38,.3); color: #F87171; }
+    .pb-m { background: rgba(245,158,11,.15); border: 2px solid rgba(245,158,11,.3); color: #FCD34D; }
+    .pb-l { background: rgba(16,185,129,.15); border: 2px solid rgba(16,185,129,.3); color: #34D399; }
+
+    /* ── DATA ── */
+    .data-band { background: white; }
+    .file-box {
+      background: var(--surf);
+      border: 1.5px solid var(--bd);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .file-box-hd {
+      background: linear-gradient(90deg, #ECFDF5, #D1FAE5);
+      padding: 10px 18px;
+      font-size: .8rem; font-weight: 700;
+      color: var(--em-dk);
+      border-bottom: 1px solid var(--bd);
+    }
+    .file-row {
+      display: grid;
+      grid-template-columns: auto 1fr;
+    }
+    .file-name {
+      padding: 13px 18px;
+      font-family: "Consolas", "Courier New", monospace;
+      font-size: .88rem; font-weight: 700;
+      color: var(--em-dk);
+      background: white;
+      border-right: 1px solid var(--bd);
+      border-bottom: 1px solid var(--bd);
+      white-space: nowrap;
+    }
+    .file-row:last-child .file-name,
+    .file-row:last-child .file-desc { border-bottom: none; }
+    .file-desc {
+      padding: 13px 18px;
+      font-size: .9rem;
+      color: var(--text);
+      border-bottom: 1px solid var(--bd);
+      background: white;
+    }
+    .info-box {
+      display: flex; align-items: flex-start; gap: 10px;
+      background: var(--surf);
+      border: 1.5px solid var(--bd);
+      border-radius: 10px;
+      padding: 13px 16px;
+      font-size: .9rem; color: var(--em-dk);
+      margin-top: 12px;
+    }
+
+    /* ── FAQ ── */
+    .faq-band { background: var(--slate); }
+    .faq-list { display: flex; flex-direction: column; gap: 10px; }
+    .faq-item {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.09);
+      border-radius: 10px;
+      padding: 18px 20px;
+      border-left: 3px solid var(--em);
+    }
+    .faq-item:nth-child(2) { border-left-color: var(--am); }
+    .faq-item:nth-child(3) { border-left-color: #60A5FA; }
+    .faq-item:nth-child(4) { border-left-color: #F87171; }
+    .faq-item:nth-child(5) { border-left-color: #A78BFA; }
+    .faq-q { font-weight: 700; color: white; margin-bottom: 6px; }
+    .faq-a { font-size: .9rem; color: rgba(255,255,255,.55); }
+    .faq-a code { background: rgba(16,185,129,.12); color: #34D399; }
+
+    /* ── FOOTER ── */
+    footer {
+      background: #080F1E;
+      padding: 44px 32px 32px;
+      text-align: center;
+    }
+    .footer-logo { font-size: 2rem; display: block; margin-bottom: 10px; }
+    .footer-name { color: white; font-size: 1.05rem; font-weight: 700; margin-bottom: 4px; }
+    .footer-sub  { color: rgba(255,255,255,.35); font-size: .82rem; }
+    .footer-tags {
+      display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-top: 14px;
+    }
+    .ftag {
+      background: rgba(16,185,129,.1);
+      border: 1px solid rgba(16,185,129,.2);
+      color: var(--em-lt);
+      font-size: .73rem;
+      padding: 3px 11px;
+      border-radius: 20px;
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 680px) {
+      .hero h1 { font-size: 1.9rem; }
+      .ctrl-grid { grid-template-columns: 1fr; }
+      .sp-grid   { grid-template-columns: 1fr; }
+      .wrap { padding: 0 18px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── TOP BAR ── -->
+<div class="topbar">
+  <span class="tb-file">todo2.py</span>
+  <span class="tb-name"><strong>ToDoアプリ</strong> 使い方ガイド</span>
+  <span class="tb-right">Python / Tkinter &nbsp;|&nbsp; Windows 10 / 11</span>
+</div>
+
+<!-- ── HERO ── -->
+<div class="hero">
+  <div class="hero-kicker">ToDoアプリ — チェックで一括完了</div>
+  <h1>シンプルな<br>タスク管理アプリ<br><em>todo2.py</em></h1>
+  <p class="hero-sub">
+    期限・優先度・メモをタスクごとに管理。<br>
+    チェックボックスで複数タスクをまとめて完了にできます。
+  </p>
+  <div class="hero-chips">
+    <span class="chip chip-em">✓ 追加ライブラリ不要</span>
+    <span class="chip chip-am">✓ 完全オフライン</span>
+    <span class="chip chip-gray">exe 配布版あり</span>
+    <span class="chip chip-gray">Windows 10 / 11</span>
+  </div>
+</div>
+
+<!-- ── SCREENSHOT ── -->
+<div class="band screen-band">
+  <div class="wrap">
+    <div class="section-tag">🖥️ 実際の画面</div>
+    <h2>入力フォーム ＋ 3つのリストエリア</h2>
+    <p class="lead">実際に <code>todo2.py</code> を起動した画面です。上から順に ①フォーム ②期限切れ ③未完了 ④完了 で構成されています。</p>
+
+    <div class="sc-outer">
+      <div class="sc-bar">
+        <span class="dot dr"></span>
+        <span class="dot dy"></span>
+        <span class="dot dg"></span>
+        <span class="sc-win-title">ToDoアプリ</span>
+      </div>
+      <img src="todo2_screenshot.png" alt="todo2.py の実際の画面" class="sc-img" />
+    </div>
+
+    <div class="legend-grid">
+      <div class="leg">
+        <div class="leg-n">①</div>
+        <div>
+          <div class="leg-title">タスク入力フォーム</div>
+          <div class="leg-desc">タイトル・期限日・優先度・メモを入力。ボタンで追加・編集・一括完了・削除ができます。</div>
+        </div>
+      </div>
+      <div class="leg">
+        <div class="leg-n red">②</div>
+        <div>
+          <div class="leg-title">期限切れ（チェックで完了）</div>
+          <div class="leg-desc">今日より前の期限を持つ未完了タスクが<strong>赤字</strong>で自動表示されます。</div>
+        </div>
+      </div>
+      <div class="leg">
+        <div class="leg-n">③</div>
+        <div>
+          <div class="leg-title">未完了（チェックで一括完了）</div>
+          <div class="leg-desc">チェックして「選択を一括完了」で複数タスクをまとめて完了にできます。</div>
+        </div>
+      </div>
+      <div class="leg">
+        <div class="leg-n am">④</div>
+        <div>
+          <div class="leg-title">完了</div>
+          <div class="leg-desc">「未完了に戻す」で元に戻したり、「完了選択を削除」で削除できます。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── CONTROLS ── -->
+<div class="band ctrl-band">
+  <div class="wrap">
+    <div class="section-tag">🎛️ 操作ガイド</div>
+    <h2>各フォームとボタンの使い方</h2>
+    <p class="lead">スクリーンショットに表示されているすべての入力欄とボタンを説明します。</p>
+
+    <div class="ctrl-grid">
+
+      <!-- 入力フォーム -->
+      <div class="ctrl-card">
+        <div class="ctrl-card-title">① 入力フォーム</div>
+        <div class="field-row">
+          <span class="field-name">タイトル</span>
+          <span class="field-desc">タスク名を入力（必須）。空白のまま追加しようとするとエラーになります。</span>
+        </div>
+        <div class="field-row">
+          <span class="field-name">期限日</span>
+          <span class="field-desc">「日付を選択」ボタンでカレンダーが開きます。「クリア」で期限なし（ハイフン「-」表示）に戻せます。今日以前の日付は設定不可。</span>
+        </div>
+        <div class="field-row">
+          <span class="field-name">優先度</span>
+          <span class="field-desc">高・中・低から選択（デフォルトは「中」）。</span>
+        </div>
+        <div class="field-row">
+          <span class="field-name">メモ</span>
+          <span class="field-desc">補足を自由に入力（任意）。</span>
+        </div>
+      </div>
+
+      <!-- アクションボタン -->
+      <div class="ctrl-card">
+        <div class="ctrl-card-title">① アクションボタン</div>
+        <div class="btn-row">
+          <span class="btn-tag btn-em">タスク追加</span>
+        </div>
+        <p style="font-size:.86rem;color:var(--muted);margin-bottom:10px;">フォームの内容で新しいタスクを追加します。編集中は「更新」に変わります。</p>
+        <div class="btn-row">
+          <span class="btn-tag btn-gray">選択を編集</span>
+        </div>
+        <p style="font-size:.86rem;color:var(--muted);margin-bottom:10px;">期限切れ・未完了リストで1件だけチェックした状態で押すと、その内容がフォームに読み込まれます。</p>
+        <div class="btn-row">
+          <span class="btn-tag btn-gray">選択を一括完了</span>
+          <span class="btn-tag btn-gray">選択を削除</span>
+        </div>
+        <p style="font-size:.86rem;color:var(--muted);margin-bottom:10px;">チェックした複数タスクをまとめて完了 / 削除します。</p>
+        <div class="btn-row">
+          <span class="btn-tag btn-gray">全選択</span>
+          <span class="btn-tag btn-gray">選択解除</span>
+          <span class="btn-tag btn-gray">編集解除</span>
+        </div>
+        <p style="font-size:.86rem;color:var(--muted);">「編集解除」は編集モードをキャンセルしてフォームをリセットします。</p>
+      </div>
+
+      <!-- 並び替え -->
+      <div class="ctrl-card">
+        <div class="ctrl-card-title am-label">① 並び替えコンボボックス</div>
+        <div class="field-row">
+          <span class="field-name">入力順</span>
+          <span class="field-desc">タスクを追加した順番。デフォルトの並び順です。</span>
+        </div>
+        <div class="field-row">
+          <span class="field-name">日付順</span>
+          <span class="field-desc">期限日が早い順に並びます。期限なし「-」は末尾に表示。</span>
+        </div>
+        <div class="field-row">
+          <span class="field-name">優先度順</span>
+          <span class="field-desc">高 → 中 → 低 の順。同優先度内は日付順で安定ソートされます。</span>
+        </div>
+      </div>
+
+      <!-- 完了エリアのボタン -->
+      <div class="ctrl-card">
+        <div class="ctrl-card-title am-label">④ 完了エリアのボタン</div>
+        <div class="btn-row" style="margin-bottom:6px;">
+          <span class="btn-tag btn-am">未完了に戻す</span>
+        </div>
+        <p style="font-size:.86rem;color:var(--muted);margin-bottom:14px;">完了エリアでチェックしたタスクを未完了状態に戻します。</p>
+        <div class="btn-row" style="margin-bottom:6px;">
+          <span class="btn-tag btn-red">完了選択を削除</span>
+        </div>
+        <p style="font-size:.86rem;color:var(--muted);">完了エリアでチェックしたタスクを削除します（元には戻せません）。</p>
+      </div>
+
+    </div>
+
+    <!-- タスク表示フォーマット -->
+    <div style="margin-top:28px;">
+      <div class="ctrl-card" style="max-width:100%;">
+        <div class="ctrl-card-title">リストのタスク表示フォーマット</div>
+        <p style="font-size:.86rem;color:var(--muted);margin-bottom:12px;">各リストエリアのチェックボックスには以下の形式でテキストが表示されます。タイトルは最大15文字で切り詰め、全角換算で幅揃えされます。</p>
+        <div class="task-preview">
+<span style="color:var(--muted);">&nbsp;1.&nbsp;</span>先月の請求書処理　　　 | 期限: 2026-06-01 | 優先度: 高 | メモ: 経理へ提出<br>
+<span style="color:var(--muted);">&nbsp;2.&nbsp;</span>レポートを書く　　　　 | 期限: 2026-07-15 | 優先度: 高 | メモ: 参考文献を先に集める<br>
+<span style="color:var(--muted);">&nbsp;3.&nbsp;</span>買い物リスト作成　　　 | 期限: -　　　　  | 優先度: 低 | メモ:
+        </div>
+        <p style="font-size:.82rem;color:var(--muted);margin-top:8px;">期限切れエリアの行は<span style="color:var(--red);font-weight:700;">赤字</span>で表示されます。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── QUICKSTART ── -->
+<div class="band qs-band">
+  <div class="wrap">
+    <div class="section-tag">🚀 起動方法</div>
+    <h2>exe 版と Python 版</h2>
+    <p class="lead">配布 exe ファイルを受け取った場合は Python 不要。ソースコードがある場合は Python で直接実行できます。</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">A</div>
+        <div class="step-body">
+          <h3>exe 版（Python インストール不要）</h3>
+          <p>配布された <strong>ToDoApp.exe</strong> を好きな場所に置いてダブルクリックするだけで起動します。</p>
+          <div class="folder-code">
+            <span class="fc-dir">📁 デスクトップ</span><br>
+            &nbsp;&nbsp;&nbsp;&nbsp;<span class="fc-exe">📄 ToDoApp.exe</span> ← ダブルクリックで起動<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;<span class="fc-json">📄 todo_data2.json</span> ← 起動後に自動作成
+          </div>
+          <div class="warn">
+            <span>⚠️</span>
+            <span>「Windows によって PC が保護されました」と表示された場合は <strong>「詳細情報」→「実行」</strong> をクリックしてください。</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">B</div>
+        <div class="step-body">
+          <h3>Python 版（ソースコードを直接実行）</h3>
+          <p>Python 3 がインストールされていれば、追加ライブラリのインストールは不要です。</p>
+          <div class="folder-code">
+            <span style="color:#6b8caa;"># todo2.py があるフォルダに移動してから実行</span><br>
+            <span style="color:#fff; background:#0F172A; padding:0 4px; border-radius:3px;">python todo2.py</span>
+          </div>
+          <div class="note">
+            <span>💡</span>
+            <span>Python 3 系であれば動作します。追加でインストールが必要なライブラリはありません（tkinter は Python 標準付属）。</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── FEATURES ── -->
+<div class="band feat-band">
+  <div class="wrap">
+    <div class="section-tag">✨ 機能一覧</div>
+    <h2>7つの機能</h2>
+    <p class="lead">スクリーンショットに写っているすべての機能です。</p>
+    <div class="feat-grid">
+      <div class="feat">
+        <div class="feat-icon">📅</div>
+        <h3>カレンダーで期限日を設定</h3>
+        <p>「日付を選択」ボタンでポップアップカレンダーが開きます。月の移動もできます。「クリア」で期限なしに戻せます。</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">☑️</div>
+        <h3>チェックで一括完了</h3>
+        <p>未完了・期限切れエリアで複数チェックして「選択を一括完了」を押すとまとめて完了にできます。</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">🔴</div>
+        <h3>期限切れを自動検出・赤表示</h3>
+        <p>今日より前の期限を持つ未完了タスクは「期限切れ」エリアに自動移動し、赤字で警告表示されます。</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">✏️</div>
+        <h3>タスクの編集</h3>
+        <p>1件だけチェックして「選択を編集」を押すとフォームに読み込まれます。変更後「更新」で上書き保存します。</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">↩️</div>
+        <h3>完了を未完了に戻す</h3>
+        <p>完了エリアで「未完了に戻す」を押すと選択したタスクを未完了状態に戻せます。</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">🔃</div>
+        <h3>3種類の並び替え</h3>
+        <p>入力順・日付順・優先度順の3モードを切り替えられます。並び替えはすべてのリストエリアに適用されます。</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">💾</div>
+        <h3>自動保存</h3>
+        <p>タスクの追加・更新・完了・削除のたびに <code>todo_data2.json</code> へ自動保存されます。アプリを閉じてもデータは残ります。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── STATUS & PRIORITY ── -->
+<div class="band sp-band">
+  <div class="wrap">
+    <div class="section-tag wh">🚦 表示エリア &amp; 優先度</div>
+    <h2 class="white">タスクの自動振り分けルール</h2>
+    <p class="lead white">タスクは状態に応じて3つのエリアへ自動的に振り分けられます。</p>
+    <div class="sp-grid">
+      <div>
+        <div class="sp-col-hd">表示エリア（3種類）</div>
+        <div class="sp-list">
+          <div class="sp-item">
+            <div class="sp-icon spi-red">⚠️</div>
+            <div>
+              <div class="sp-name">期限切れ</div>
+              <div class="sp-desc">今日より前の期限を持つ未完了タスク。赤字で表示。</div>
+            </div>
+          </div>
+          <div class="sp-item">
+            <div class="sp-icon spi-em">📋</div>
+            <div>
+              <div class="sp-name">未完了</div>
+              <div class="sp-desc">今日以降の期限を持つ、または期限なしの未完了タスク。</div>
+            </div>
+          </div>
+          <div class="sp-item">
+            <div class="sp-icon spi-gray">✓</div>
+            <div>
+              <div class="sp-name">完了</div>
+              <div class="sp-desc">完了済みタスク。未完了に戻したり削除したりできます。</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="sp-col-hd">優先度（3段階）</div>
+        <div class="sp-list">
+          <div class="sp-item">
+            <div class="pri-badge pb-h">高</div>
+            <div>
+              <div class="sp-name">高優先度</div>
+              <div class="sp-desc">急いで対応が必要なタスク。</div>
+            </div>
+          </div>
+          <div class="sp-item">
+            <div class="pri-badge pb-m">中</div>
+            <div>
+              <div class="sp-name">中優先度</div>
+              <div class="sp-desc">通常の優先度。デフォルト値。</div>
+            </div>
+          </div>
+          <div class="sp-item">
+            <div class="pri-badge pb-l">低</div>
+            <div>
+              <div class="sp-name">低優先度</div>
+              <div class="sp-desc">時間があるときに対応するタスク。</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── DATA ── -->
+<div class="band data-band">
+  <div class="wrap">
+    <div class="section-tag">💾 データ保存</div>
+    <h2>保存ファイルは1つだけ</h2>
+    <p class="lead">exe・todo2.py と同じフォルダに自動作成されます。</p>
+
+    <div class="file-box">
+      <div class="file-box-hd">📁 同じフォルダに作られるファイル</div>
+      <div class="file-row">
+        <div class="file-name">ToDoApp.exe</div>
+        <div class="file-desc">アプリ本体（exe 版）。ダブルクリックで起動します。</div>
+      </div>
+      <div class="file-row">
+        <div class="file-name">todo_data2.json</div>
+        <div class="file-desc">全タスクの保存ファイル。起動時に自動作成され、操作のたびに自動更新されます。</div>
+      </div>
+    </div>
+
+    <div class="info-box">
+      <span>💡</span>
+      <span><strong>バックアップ：</strong><code>todo_data2.json</code> をコピーするだけで全データをバックアップできます。JSON 形式なのでテキストエディターでも中身を確認できます。</span>
+    </div>
+    <div class="info-box">
+      <span>🔄</span>
+      <span><strong>移行：</strong><code>ToDoApp.exe</code> と <code>todo_data2.json</code> を一緒にコピーすれば、別のフォルダや別の PC でもそのままデータを引き継いで使えます。</span>
+    </div>
+  </div>
+</div>
+
+<!-- ── FAQ ── -->
+<div class="band faq-band">
+  <div class="wrap">
+    <div class="section-tag wh">❓ FAQ</div>
+    <h2 class="white">よくある質問</h2>
+    <p class="lead white">気になることはこちらで解決！</p>
+    <div class="faq-list">
+      <div class="faq-item">
+        <div class="faq-q">Q. Python をインストールしないと使えませんか？</div>
+        <p class="faq-a">A. exe 版（ToDoApp.exe）であれば Python は<strong style="color:white;">不要</strong>です。ダブルクリックだけで起動できます。</p>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Q. セキュリティソフトが「危険」と警告しました。</div>
+        <p class="faq-a">A. Python で作成した exe は誤検知されることがあります。配布元を信頼できる場合は「詳細情報 → 実行」を選択してください。</p>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Q. データはインターネットに送られますか？</div>
+        <p class="faq-a">A. <strong style="color:white;">送られません。</strong> 完全オフラインで動作します。すべてのデータは PC 内の <code>todo_data2.json</code> にのみ保存されます。</p>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Q. 削除したタスクを元に戻せますか？</div>
+        <p class="faq-a">A. 削除後は元に戻せません。事前に <code>todo_data2.json</code> をバックアップしておくことをおすすめします。なお「完了」状態のタスクは「未完了に戻す」で復元できます。</p>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Q. Mac や Linux でも使えますか？</div>
+        <p class="faq-a">A. exe 版は <strong style="color:white;">Windows（10 / 11）専用</strong>です。Mac / Linux で使う場合は Python 3 をインストールして <code>python todo2.py</code> で直接実行してください。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <span class="footer-logo">✅</span>
+  <div class="footer-name">ToDoアプリ</div>
+  <div class="footer-sub">チェックボックスで一括完了できる GUI ToDo アプリ</div>
+  <div class="footer-tags">
+    <span class="ftag">todo2.py</span>
+    <span class="ftag">Python / Tkinter</span>
+    <span class="ftag">Windows 10 / 11</span>
+    <span class="ftag">完全オフライン</span>
+    <span class="ftag">PyInstaller exe</span>
+  </div>
+</footer>
+
+</body>
+</html>

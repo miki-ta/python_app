@@ -1,0 +1,6 @@
+﻿
+color: str = "red"
+
+price: int = 3500
+
+

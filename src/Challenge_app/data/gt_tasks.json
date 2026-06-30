@@ -1,0 +1,38 @@
+[
+  {
+    "task_id": "TASK-001",
+    "title": "Pythonの教科書",
+    "assignee": "あああ",
+    "status": "未対応",
+    "priority": "中",
+    "start_date": "2026-06-16",
+    "due_date": "2026-06-26",
+    "memo": "第３章",
+    "created_at": "2026-06-27 11:50:36",
+    "updated_at": "2026-06-29 18:13:27"
+  },
+  {
+    "task_id": "TASK-002",
+    "title": "Pythonの教科書",
+    "assignee": "いいい",
+    "status": "完了",
+    "priority": "中",
+    "start_date": "-",
+    "due_date": "-",
+    "memo": "第４章",
+    "created_at": "2026-06-27 11:51:06",
+    "updated_at": "2026-06-29 18:13:10"
+  },
+  {
+    "task_id": "TASK-003",
+    "title": "グループ TODOの履歴管理",
+    "assignee": "未割り当て",
+    "status": "処理中",
+    "priority": "高",
+    "start_date": "-",
+    "due_date": "-",
+    "memo": "",
+    "created_at": "2026-06-27 11:52:47",
+    "updated_at": "2026-06-27 11:52:57"
+  }
+]

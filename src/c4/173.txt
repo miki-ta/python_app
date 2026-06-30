@@ -1,0 +1,13 @@
+﻿
+hand = ["グー", "チョキ", "パー"]
+list( enumerate(hand) )
+
+
+import datetime
+datetime.date.today()
+
+
+
+import datetime
+t = datetime.datetime.now()
+t.strftime("%Y/%m/%d %H:%M:%S")

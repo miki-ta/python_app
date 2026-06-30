@@ -1,0 +1,2 @@
+﻿
+tensorboard --logdir <プログラム配置パス>logs

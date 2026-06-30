@@ -1,0 +1,108 @@
+[
+  {
+    "task_id": "TASK-001",
+    "title": "Pythonの教科書",
+    "category": "学習",
+    "tags": [],
+    "assignee": "未割り当て",
+    "status": "処理中",
+    "priority": "高",
+    "start_date": "2026-06-25",
+    "due_date": "2026-06-25",
+    "memo": "第３章",
+    "reminder_minutes": 0,
+    "created_at": "2026-06-26 16:12:22",
+    "reminded": false,
+    "parent_id": null,
+    "comments": [
+      {
+        "author": "未割り当て",
+        "text": "第３章早めに読んでください",
+        "timestamp": "2026-06-26 20:33:44"
+      },
+      {
+        "author": "未割り当て",
+        "text": "土曜に読みます",
+        "timestamp": "2026-06-26 20:34:20"
+      },
+      {
+        "author": "未割り当て",
+        "text": "承知しました。日付を変更しておいてください",
+        "timestamp": "2026-06-26 20:34:43"
+      },
+      {
+        "author": "未割り当て",
+        "text": "承知しました",
+        "timestamp": "2026-06-26 20:34:52"
+      }
+    ]
+  },
+  {
+    "task_id": "TASK-002",
+    "title": "Pythonの教科書",
+    "category": "学習",
+    "tags": [],
+    "assignee": "未割り当て",
+    "status": "処理中",
+    "priority": "中",
+    "start_date": "2026-06-23",
+    "due_date": "2026-06-30",
+    "memo": "第４章",
+    "reminder_minutes": 0,
+    "created_at": "2026-06-26 16:16:01",
+    "reminded": false,
+    "parent_id": null,
+    "comments": []
+  },
+  {
+    "task_id": "TASK-005",
+    "title": "タスク管理表の実装",
+    "category": "仕事",
+    "tags": [],
+    "assignee": "未割り当て",
+    "status": "完了",
+    "priority": "低",
+    "start_date": "2026-06-27",
+    "due_date": "2026-06-27",
+    "memo": "",
+    "reminder_minutes": 0,
+    "created_at": "2026-06-26 17:20:26",
+    "reminded": false,
+    "parent_id": null,
+    "comments": []
+  },
+  {
+    "task_id": "TASK-006",
+    "title": "サブタスク確認１",
+    "category": "仕事",
+    "tags": [],
+    "assignee": "未割り当て",
+    "status": "完了",
+    "priority": "低",
+    "start_date": "-",
+    "due_date": "-",
+    "memo": "",
+    "reminder_minutes": 0,
+    "created_at": "2026-06-26 20:30:19",
+    "reminded": false,
+    "parent_id": "TASK-005",
+    "comments": []
+  },
+  {
+    "task_id": "TASK-007",
+    "title": "サブタスク確認２",
+    "category": "仕事",
+    "tags": [],
+    "assignee": "未割り当て",
+    "status": "処理中",
+    "priority": "低",
+    "start_date": "-",
+    "due_date": "-",
+    "memo": "",
+    "reminder_minutes": 0,
+    "created_at": "2026-06-26 20:30:52",
+    "reminded": false,
+    "parent_id": "TASK-005",
+    "comments": []
+  }
+]

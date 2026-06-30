@@ -1,8 +1,0 @@
-openai>=1.0.0
-anthropic>=0.25.0
-python-dotenv>=1.0.0
-# 録音機能に必要
-sounddevice>=0.4.0
-numpy>=1.20.0
-# 25MB超の録音を分割する場合のみ必要 (ffmpeg も別途インストール)
-# pydub>=0.25.1

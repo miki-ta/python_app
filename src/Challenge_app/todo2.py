@@ -4,13 +4,19 @@ from dataclasses import asdict, dataclass
 import calendar
 from datetime import date
 import json
+import sys
 import unicodedata
 from pathlib import Path
 import tkinter as tk
 from tkinter import messagebox, ttk
 
+# PyInstaller でフリーズされた場合は exe の隣に保存する
+if getattr(sys, "frozen", False):
+    _BASE_DIR = Path(sys.executable).parent
+else:
+    _BASE_DIR = Path(__file__).parent
 
-DATA_FILE = Path(__file__).with_name("todo_data2.json")
+DATA_FILE = _BASE_DIR / "todo_data2.json"
 
 
 @dataclass

@@ -7,8 +7,6 @@ from tkinter import ttk, messagebox, simpledialog
 from dataclasses import dataclass, field
 from pathlib import Path
 import json as _json
-import sqlite3
-import contextlib
 from datetime import datetime, date
 import calendar
 
@@ -39,17 +37,14 @@ class Category:
     color: str
 
 
-# ======================== データベース ========================
+# ======================== データストレージ（JSON） ========================
 
-DATA_DIR = Path(__file__).parent / "data"
-DB_FILE  = DATA_DIR / "tm_tasks.db"
-
-# 旧 JSON ファイル（初回マイグレーション用）
-_LEGACY_TASKS_FILE     = DATA_DIR / "tm_tasks.json"
-_LEGACY_CATS_FILE      = DATA_DIR / "tm_categories.json"
-_LEGACY_ASSIGNEES_FILE = DATA_DIR / "tm_assignees.json"
-_LEGACY_COUNTER_FILE   = DATA_DIR / "tm_counter.json"
-_LEGACY_NOTIFS_FILE    = DATA_DIR / "tm_notifications.json"
+DATA_DIR       = Path(__file__).parent / "data"
+TASKS_FILE     = DATA_DIR / "tm_tasks.json"
+CATS_FILE      = DATA_DIR / "tm_categories.json"
+ASSIGNEES_FILE = DATA_DIR / "tm_assignees.json"
+COUNTER_FILE   = DATA_DIR / "tm_counter.json"
+NOTIFS_FILE    = DATA_DIR / "tm_notifications.json"
 
 DEFAULT_CATEGORIES = [
     Category("仕事",   "#4472C4"),
@@ -64,78 +59,7 @@ CATEGORY_COLORS = [
 ]
 
 
-@contextlib.contextmanager
-def _db():
-    """SQLite 接続を開いてトランザクションを管理するコンテキストマネージャ。"""
-    DATA_DIR.mkdir(exist_ok=True)
-    conn = sqlite3.connect(str(DB_FILE), timeout=10)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")   # 並列読み取りを許可
-    conn.execute("PRAGMA busy_timeout=5000")  # ロック待機 5 秒
-    try:
-        yield conn
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
-
-
-def init_db():
-    """DB テーブル作成 + 初期データ投入 + JSON からのマイグレーション。"""
-    with _db() as conn:
-        conn.executescript("""
-            CREATE TABLE IF NOT EXISTS tasks (
-                task_id          TEXT PRIMARY KEY,
-                title            TEXT NOT NULL DEFAULT '',
-                category         TEXT DEFAULT '',
-                tags             TEXT DEFAULT '[]',
-                assignee         TEXT DEFAULT '',
-                status           TEXT DEFAULT '未対応',
-                priority         TEXT DEFAULT '中',
-                start_date       TEXT DEFAULT '-',
-                due_date         TEXT DEFAULT '-',
-                memo             TEXT DEFAULT '',
-                reminder_minutes INTEGER DEFAULT 0,
-                created_at       TEXT DEFAULT '',
-                reminded         INTEGER DEFAULT 0,
-                parent_id        TEXT,
-                comments         TEXT DEFAULT '[]'
-            );
-            CREATE TABLE IF NOT EXISTS categories (
-                name  TEXT PRIMARY KEY,
-                color TEXT NOT NULL DEFAULT '#767676'
-            );
-            CREATE TABLE IF NOT EXISTS assignees (
-                name TEXT PRIMARY KEY
-            );
-            CREATE TABLE IF NOT EXISTS notifications (
-                id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                task_id    TEXT,
-                task_title TEXT,
-                message    TEXT,
-                assignee   TEXT,
-                timestamp  TEXT,
-                is_read    INTEGER DEFAULT 0
-            );
-            CREATE TABLE IF NOT EXISTS counter (
-                id    INTEGER PRIMARY KEY CHECK (id = 1),
-                value INTEGER DEFAULT 0
-            );
-        """)
-        conn.execute("INSERT OR IGNORE INTO counter(id, value) VALUES(1, 0)")
-        # デフォルトカテゴリ・担当者を未登録時のみ追加
-        if conn.execute("SELECT COUNT(*) FROM categories").fetchone()[0] == 0:
-            conn.executemany("INSERT OR IGNORE INTO categories(name, color) VALUES(?,?)",
-                             [(c.name, c.color) for c in DEFAULT_CATEGORIES])
-        if conn.execute("SELECT COUNT(*) FROM assignees").fetchone()[0] == 0:
-            conn.execute("INSERT OR IGNORE INTO assignees(name) VALUES(?)", ("未割り当て",))
-    _migrate_from_json()
-
-
-def _lj(path, default):
-    """旧 JSON ファイルを安全に読む（マイグレーション専用）。"""
+def _load_json(path, default):
     if not path.exists():
         return default
     try:
@@ -145,103 +69,82 @@ def _lj(path, default):
         return default
 
 
-def _migrate_from_json():
-    """旧 JSON ファイルが存在する場合に SQLite へ一度だけ移行する。"""
-    if not _LEGACY_TASKS_FILE.exists():
-        return
-    with _db() as conn:
-        if conn.execute("SELECT COUNT(*) FROM tasks").fetchone()[0] > 0:
-            return  # 既に移行済み
-        items = _lj(_LEGACY_TASKS_FILE, [])
-        for item in items:
-            item.setdefault("tags", [])
-            item.setdefault("reminder_minutes", 0)
-            item.setdefault("reminded", False)
-            item.setdefault("parent_id", None)
-            item.setdefault("comments", [])
-            item.setdefault("start_date", "-")
-            item.setdefault("memo", "")
-            item.setdefault("created_at", "")
-            try:
-                conn.execute(
-                    "INSERT OR IGNORE INTO tasks VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                    (item["task_id"], item["title"], item.get("category", ""),
-                     _json.dumps(item["tags"], ensure_ascii=False),
-                     item.get("assignee", ""), item.get("status", "未対応"),
-                     item.get("priority", "中"), item["start_date"],
-                     item.get("due_date", "-"), item["memo"],
-                     item["reminder_minutes"], item["created_at"],
-                     int(bool(item["reminded"])), item.get("parent_id"),
-                     _json.dumps(item["comments"], ensure_ascii=False)),
-                )
-            except Exception:
-                pass
-        # カウンター移行
-        ctr = _lj(_LEGACY_COUNTER_FILE, {"counter": 0}).get("counter", 0)
-        maxn = max((int(x.get("task_id","0").split("-")[-1])
-                    for x in items if "-" in x.get("task_id","")), default=0)
-        conn.execute("UPDATE counter SET value=? WHERE id=1", (max(ctr, maxn),))
-        # カテゴリ移行
-        for c in _lj(_LEGACY_CATS_FILE, []):
-            try:
-                conn.execute("INSERT OR IGNORE INTO categories(name,color) VALUES(?,?)",
-                             (c["name"], c["color"]))
-            except Exception:
-                pass
-        # 担当者移行
-        for a in _lj(_LEGACY_ASSIGNEES_FILE, []):
-            if isinstance(a, str):
-                conn.execute("INSERT OR IGNORE INTO assignees(name) VALUES(?)", (a,))
-        # 通知移行
-        for n in _lj(_LEGACY_NOTIFS_FILE, []):
-            conn.execute(
-                "INSERT INTO notifications(task_id,task_title,message,assignee,timestamp,is_read)"
-                " VALUES(?,?,?,?,?,?)",
-                (n.get("task_id",""), n.get("task_title",""), n.get("message",""),
-                 n.get("assignee",""), n.get("timestamp",""), int(n.get("read", False))),
-            )
+def _save_json(path, data):
+    DATA_DIR.mkdir(exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        _json.dump(data, f, ensure_ascii=False, indent=2)
 
 
-def _row_to_task(row) -> "Task":
+def init_db():
+    """JSON ファイルを初期化し、旧 SQLite があれば一度だけ移行する。"""
+    DATA_DIR.mkdir(exist_ok=True)
+    if not CATS_FILE.exists():
+        _save_json(CATS_FILE, [{"name": c.name, "color": c.color} for c in DEFAULT_CATEGORIES])
+    if not ASSIGNEES_FILE.exists():
+        _save_json(ASSIGNEES_FILE, ["未割り当て"])
+    if not COUNTER_FILE.exists():
+        _save_json(COUNTER_FILE, {"counter": 0})
+    if not TASKS_FILE.exists():
+        _save_json(TASKS_FILE, [])
+    if not NOTIFS_FILE.exists():
+        _save_json(NOTIFS_FILE, [])
+
+
+def _dict_to_task(d) -> "Task":
     return Task(
-        task_id          = row["task_id"],
-        title            = row["title"],
-        category         = row["category"],
-        tags             = _json.loads(row["tags"] or "[]"),
-        assignee         = row["assignee"],
-        status           = row["status"],
-        priority         = row["priority"],
-        start_date       = row["start_date"],
-        due_date         = row["due_date"],
-        memo             = row["memo"],
-        reminder_minutes = row["reminder_minutes"],
-        created_at       = row["created_at"],
-        reminded         = bool(row["reminded"]),
-        parent_id        = row["parent_id"],
-        comments         = _json.loads(row["comments"] or "[]"),
+        task_id          = d["task_id"],
+        title            = d.get("title", ""),
+        category         = d.get("category", ""),
+        tags             = d.get("tags", []),
+        assignee         = d.get("assignee", ""),
+        status           = d.get("status", "未対応"),
+        priority         = d.get("priority", "中"),
+        start_date       = d.get("start_date", "-"),
+        due_date         = d.get("due_date", "-"),
+        memo             = d.get("memo", ""),
+        reminder_minutes = d.get("reminder_minutes", 0),
+        created_at       = d.get("created_at", ""),
+        reminded         = d.get("reminded", False),
+        parent_id        = d.get("parent_id"),
+        comments         = d.get("comments", []),
     )
 
 
+def _task_to_dict(task: "Task") -> dict:
+    return {
+        "task_id":          task.task_id,
+        "title":            task.title,
+        "category":         task.category,
+        "tags":             task.tags,
+        "assignee":         task.assignee,
+        "status":           task.status,
+        "priority":         task.priority,
+        "start_date":       task.start_date,
+        "due_date":         task.due_date,
+        "memo":             task.memo,
+        "reminder_minutes": task.reminder_minutes,
+        "created_at":       task.created_at,
+        "reminded":         task.reminded,
+        "parent_id":        task.parent_id,
+        "comments":         task.comments,
+    }
+
+
 def load_tasks() -> list:
-    with _db() as conn:
-        rows = conn.execute("SELECT * FROM tasks ORDER BY task_id").fetchall()
-    return [_row_to_task(r) for r in rows]
+    return [_dict_to_task(d) for d in _load_json(TASKS_FILE, [])]
 
 
 def upsert_task(task: "Task") -> bool:
-    """1件のタスクを INSERT OR REPLACE で保存（他ユーザーの変更を上書きしない）。"""
     try:
-        with _db() as conn:
-            conn.execute(
-                "INSERT OR REPLACE INTO tasks VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                (task.task_id, task.title, task.category,
-                 _json.dumps(task.tags, ensure_ascii=False),
-                 task.assignee, task.status, task.priority,
-                 task.start_date, task.due_date, task.memo,
-                 task.reminder_minutes, task.created_at,
-                 int(task.reminded), task.parent_id,
-                 _json.dumps(task.comments, ensure_ascii=False)),
-            )
+        items = _load_json(TASKS_FILE, [])
+        d = _task_to_dict(task)
+        for i, item in enumerate(items):
+            if item["task_id"] == task.task_id:
+                items[i] = d
+                break
+        else:
+            items.append(d)
+        _save_json(TASKS_FILE, items)
         return True
     except Exception:
         return False
@@ -249,90 +152,82 @@ def upsert_task(task: "Task") -> bool:
 
 def delete_tasks_by_ids(ids) -> bool:
     try:
-        with _db() as conn:
-            conn.executemany("DELETE FROM tasks WHERE task_id=?", [(i,) for i in ids])
+        ids = set(ids)
+        items = [t for t in _load_json(TASKS_FILE, []) if t["task_id"] not in ids]
+        _save_json(TASKS_FILE, items)
         return True
     except Exception:
         return False
 
 
-def next_task_counter() -> tuple:
-    """カウンターをアトミックに +1 して (int, 'TASK-NNN') を返す。"""
-    with _db() as conn:
-        conn.execute("UPDATE counter SET value = value + 1 WHERE id=1")
-        n = conn.execute("SELECT value FROM counter WHERE id=1").fetchone()[0]
-    return n, f"TASK-{n:03d}"
+def next_task_counter() -> str:
+    data = _load_json(COUNTER_FILE, {"counter": 0})
+    n = data["counter"] + 1
+    _save_json(COUNTER_FILE, {"counter": n})
+    return f"TASK-{n:03d}"
 
 
 def load_categories() -> list:
-    with _db() as conn:
-        rows = conn.execute("SELECT name, color FROM categories").fetchall()
-    return [Category(r["name"], r["color"]) for r in rows] or list(DEFAULT_CATEGORIES)
+    items = _load_json(CATS_FILE, [])
+    return [Category(c["name"], c["color"]) for c in items] or list(DEFAULT_CATEGORIES)
 
 
 def save_categories(cats: list) -> bool:
     try:
-        with _db() as conn:
-            conn.execute("DELETE FROM categories")
-            conn.executemany("INSERT INTO categories(name,color) VALUES(?,?)",
-                             [(c.name, c.color) for c in cats])
+        _save_json(CATS_FILE, [{"name": c.name, "color": c.color} for c in cats])
         return True
     except Exception:
         return False
 
 
 def load_assignees() -> list:
-    with _db() as conn:
-        rows = conn.execute("SELECT name FROM assignees ORDER BY rowid").fetchall()
-    return [r["name"] for r in rows] or ["未割り当て"]
+    return _load_json(ASSIGNEES_FILE, ["未割り当て"]) or ["未割り当て"]
 
 
 def save_assignees(assignees: list) -> bool:
     try:
-        with _db() as conn:
-            conn.execute("DELETE FROM assignees")
-            conn.executemany("INSERT INTO assignees(name) VALUES(?)",
-                             [(a,) for a in assignees])
+        _save_json(ASSIGNEES_FILE, assignees)
         return True
     except Exception:
         return False
 
 
 def load_notifications() -> list:
-    with _db() as conn:
-        rows = conn.execute(
-            "SELECT id,task_id,task_title,message,assignee,timestamp,is_read"
-            " FROM notifications ORDER BY id DESC LIMIT 100"
-        ).fetchall()
-    return [{"db_id": r["id"], "task_id": r["task_id"], "task_title": r["task_title"],
-             "message": r["message"], "assignee": r["assignee"],
-             "timestamp": r["timestamp"], "read": bool(r["is_read"])} for r in rows]
+    items = _load_json(NOTIFS_FILE, [])
+    return list(reversed(items[-100:]))
 
 
 def add_notification_to_db(task_id, task_title, message, assignee, timestamp):
     try:
-        with _db() as conn:
-            conn.execute(
-                "INSERT INTO notifications(task_id,task_title,message,assignee,timestamp,is_read)"
-                " VALUES(?,?,?,?,?,0)",
-                (task_id, task_title, message, assignee, timestamp),
-            )
+        items = _load_json(NOTIFS_FILE, [])
+        new_id = max((n.get("db_id", 0) for n in items), default=0) + 1
+        items.append({
+            "db_id":      new_id,
+            "task_id":    task_id,
+            "task_title": task_title,
+            "message":    message,
+            "assignee":   assignee,
+            "timestamp":  timestamp,
+            "read":       False,
+        })
+        _save_json(NOTIFS_FILE, items)
     except Exception:
         pass
 
 
 def mark_all_notifications_read():
     try:
-        with _db() as conn:
-            conn.execute("UPDATE notifications SET is_read=1")
+        items = _load_json(NOTIFS_FILE, [])
+        for n in items:
+            n["read"] = True
+        _save_json(NOTIFS_FILE, items)
     except Exception:
         pass
 
 
 def clear_all_notifications():
     try:
-        with _db() as conn:
-            conn.execute("DELETE FROM notifications")
+        _save_json(NOTIFS_FILE, [])
     except Exception:
         pass
 
@@ -469,10 +364,11 @@ class TaskEditorDialog(tk.Toplevel):
         ttk.Label(form, text="状態:").grid(row=r, column=0, sticky=tk.W, pady=4)
         self.status_var = tk.StringVar(value=task.status)
         _STATUS_COLORS = {
-            "未対応": {"sel": "#e74c3c", "unsel_bg": "#fdecea", "unsel_fg": "#e74c3c"},
-            "処理中": {"sel": "#3498db", "unsel_bg": "#e8f4fd", "unsel_fg": "#3498db"},
-            "完了":   {"sel": "#27ae60", "unsel_bg": "#eafaf1", "unsel_fg": "#27ae60"},
+            "未対応": {"sel": "#b05050", "unsel_bg": "#f2e8e8", "unsel_fg": "#b05050"},
+            "処理中": {"sel": "#b8843a", "unsel_bg": "#f2ece0", "unsel_fg": "#b8843a"},
+            "完了":   {"sel": "#4e8068", "unsel_bg": "#e4eeea", "unsel_fg": "#4e8068"},
         }
+        _STATUS_ICONS = {"未対応": "⏸", "処理中": "▶", "完了": "✓"}
         sbf = tk.Frame(form)
         sbf.grid(row=r, column=1, sticky=tk.W, pady=4)
         self._status_dialog_btns = {}
@@ -491,7 +387,7 @@ class TaskEditorDialog(tk.Toplevel):
         for s, c in _STATUS_COLORS.items():
             is_sel = (s == task.status)
             b = tk.Button(
-                sbf, text=s,
+                sbf, text=f"{_STATUS_ICONS[s]} {s}",
                 font=("Arial", 10, "bold"),
                 bg=c["sel"] if is_sel else c["unsel_bg"],
                 fg="white" if is_sel else c["unsel_fg"],
@@ -506,9 +402,41 @@ class TaskEditorDialog(tk.Toplevel):
 
         ttk.Label(form, text="優先度:").grid(row=r, column=0, sticky=tk.W, pady=4)
         self.priority_var = tk.StringVar(value=task.priority)
-        ttk.Combobox(form, textvariable=self.priority_var,
-                     values=["高", "中", "低"],
-                     state="readonly", width=33).grid(row=r, column=1, sticky=tk.EW, pady=4)
+        _PRIORITY_COLORS = {
+            "高": {"sel": "#b05050", "unsel_bg": "#f2e8e8", "unsel_fg": "#b05050"},
+            "中": {"sel": "#b8843a", "unsel_bg": "#f2ece0", "unsel_fg": "#b8843a"},
+            "低": {"sel": "#4e8068", "unsel_bg": "#e4eeea", "unsel_fg": "#4e8068"},
+        }
+        _PRIORITY_ICONS = {"高": "🔴", "中": "🟡", "低": "🟢"}
+        pbf = tk.Frame(form)
+        pbf.grid(row=r, column=1, sticky=tk.W, pady=4)
+        self._priority_dialog_btns = {}
+
+        def _pick_priority(p):
+            self.priority_var.set(p)
+            for label, b in self._priority_dialog_btns.items():
+                c = _PRIORITY_COLORS[label]
+                if label == p:
+                    b.config(bg=c["sel"], fg="white",
+                             activebackground=c["sel"], activeforeground="white")
+                else:
+                    b.config(bg=c["unsel_bg"], fg=c["unsel_fg"],
+                             activebackground=c["sel"], activeforeground="white")
+
+        for p, c in _PRIORITY_COLORS.items():
+            is_sel = (p == task.priority)
+            b = tk.Button(
+                pbf, text=f"{_PRIORITY_ICONS.get(p, '')} {p}",
+                font=("Arial", 10, "bold"),
+                bg=c["sel"] if is_sel else c["unsel_bg"],
+                fg="white" if is_sel else c["unsel_fg"],
+                activebackground=c["sel"], activeforeground="white",
+                relief="flat", bd=0, padx=12, pady=6,
+                cursor="hand2",
+                command=lambda v=p: _pick_priority(v),
+            )
+            b.pack(side=tk.LEFT, padx=3)
+            self._priority_dialog_btns[p] = b
         r += 1
 
         # 開始日
@@ -986,10 +914,17 @@ class AssigneeManagerDialog(tk.Toplevel):
 class TaskManagerApp:
     REMINDER_INTERVAL_MS = 60_000  # 1分ごとにリマインダーチェック
 
+    STATUS_ICONS = {"未対応": "⏸", "処理中": "▶", "完了": "✓"}
+    PRIORITY_ICONS = {"高": "🔴", "中": "🟡", "低": "🟢"}
     STATUS_COLORS_MAP = {
-        "未対応": {"bg": "#e74c3c", "activebg": "#c0392b"},
-        "処理中": {"bg": "#3498db", "activebg": "#2980b9"},
-        "完了":   {"bg": "#27ae60", "activebg": "#219a52"},
+        "未対応": {"bg": "#b05050", "activebg": "#8e3e3e"},
+        "処理中": {"bg": "#b8843a", "activebg": "#9a6e2e"},
+        "完了":   {"bg": "#4e8068", "activebg": "#3d6654"},
+    }
+    PRIORITY_COLORS_MAP = {
+        "高": {"bg": "#b05050", "activebg": "#8e3e3e"},
+        "中": {"bg": "#b8843a", "activebg": "#9a6e2e"},
+        "低": {"bg": "#4e8068", "activebg": "#3d6654"},
     }
     COL_DEFS = [
         ("status",     "状態",            100, tk.CENTER),
@@ -1286,10 +1221,12 @@ class TaskManagerApp:
                 base_bg = "#eef3ff" if i % 2 == 0 else "#f5f8ff"
             else:
                 base_bg = "#f8f8f8" if i % 2 == 0 else "white"
-            if self._is_overdue(task):
+            is_overdue = self._is_overdue(task)
+            if is_overdue:
                 base_bg = "#fff3cd"
             is_sel = task.task_id in self._selected_ids
             bg = "#cce5ff" if is_sel else base_bg
+            text_fg = "#b05050" if is_overdue else "black"
 
             row = tk.Frame(self._rows_frame, bg=bg)
             row.pack(fill=tk.X, side=tk.TOP)
@@ -1303,7 +1240,6 @@ class TaskManagerApp:
                 pct = done_count / total_count
             else:
                 progress_str = "-"
-                done_count = total_count = 0
                 pct = 0.0
 
             indent = "  └ " if is_child else ""
@@ -1333,7 +1269,7 @@ class TaskManagerApp:
                 if col == "status":
                     c = self.STATUS_COLORS_MAP.get(task.status, {"bg": "#999", "activebg": "#777"})
                     sb = tk.Button(
-                        cell, text=task.status,
+                        cell, text=f"{self.STATUS_ICONS.get(task.status, '')} {task.status}",
                         bg=c["bg"], fg="white",
                         activebackground=c["activebg"], activeforeground="white",
                         font=("Arial", 9, "bold"), relief="flat", bd=0,
@@ -1362,10 +1298,21 @@ class TaskManagerApp:
                         anchor=anchor, font=("Arial", 9, "bold"),
                         foreground=fg_color, padx=4,
                     ).pack(fill=tk.BOTH, expand=True)
+                elif col == "priority":
+                    c = self.PRIORITY_COLORS_MAP.get(task.priority, {"bg": "#999999", "activebg": "#777777"})
+                    pb = tk.Button(
+                        cell, text=f"{self.PRIORITY_ICONS.get(task.priority, '')} {task.priority}",
+                        bg=c["bg"], fg="white",
+                        activebackground=c["activebg"], activeforeground="white",
+                        font=("Arial", 9, "bold"), relief="flat", bd=0,
+                        cursor="hand2",
+                    )
+                    pb.config(command=lambda t=task, b=pb: self._priority_btn_click(t, b))
+                    pb.pack(padx=5, pady=3, fill=tk.X)
                 else:
                     tk.Label(
                         cell, text=cell_values[col], bg=bg,
-                        anchor=anchor, font=("Arial", 9), padx=4,
+                        anchor=anchor, font=("Arial", 9), padx=4, fg=text_fg,
                     ).pack(fill=tk.BOTH, expand=True)
 
             row.bind("<Button-1>",        lambda _, tid=task.task_id: self._select_row(tid))
@@ -1394,7 +1341,7 @@ class TaskManagerApp:
     # ------------------------------------------------------------------ CRUD
 
     def add_task(self):
-        _, task_id = next_task_counter()
+        task_id = next_task_counter()
         cat_name = self.categories[0].name if self.categories else "その他"
         new_task = Task(
             task_id=task_id,
@@ -1475,7 +1422,7 @@ class TaskManagerApp:
             messagebox.showwarning("注意", "サブタスクにはサブタスクを追加できません（階層は1段階まで）")
             return
 
-        _, task_id = next_task_counter()
+        task_id = next_task_counter()
         new_task = Task(
             task_id=task_id,
             title="",
@@ -1631,6 +1578,42 @@ class TaskManagerApp:
 
     # ------------------------------------------------------------------ 状態ボタン・選択・スクロール
 
+    def _priority_btn_click(self, task, btn):
+        x = btn.winfo_rootx()
+        y = btn.winfo_rooty() + btn.winfo_height()
+        self._show_priority_popup(x, y, task)
+
+    def _show_priority_popup(self, x, y, task):
+        popup = tk.Toplevel(self.root)
+        popup.wm_overrideredirect(True)
+        popup.geometry(f"+{x}+{y}")
+        popup.configure(bg="#444444")
+
+        def set_priority(p):
+            task.priority = p
+            upsert_task(task)
+            self.refresh_table()
+            if popup.winfo_exists():
+                popup.destroy()
+
+        for priority, colors in self.PRIORITY_COLORS_MAP.items():
+            tk.Button(
+                popup,
+                text=f"  {self.PRIORITY_ICONS.get(priority, '')} {priority}  ",
+                bg=colors["bg"], fg="white",
+                activebackground=colors["activebg"], activeforeground="white",
+                font=("Arial", 10, "bold"),
+                relief="flat", bd=0,
+                padx=10, pady=7,
+                cursor="hand2",
+                command=lambda p=priority: set_priority(p),
+            ).pack(fill=tk.X, padx=2, pady=1)
+
+        popup.bind("<Escape>", lambda _: popup.destroy())
+        popup.bind("<FocusOut>", lambda _: popup.destroy() if popup.winfo_exists() else None)
+        popup.update_idletasks()
+        popup.focus_set()
+
     def _status_btn_click(self, task, btn):
         x = btn.winfo_rootx()
         y = btn.winfo_rooty() + btn.winfo_height()
@@ -1657,7 +1640,7 @@ class TaskManagerApp:
         for status, colors in self.STATUS_COLORS_MAP.items():
             tk.Button(
                 popup,
-                text=f"  {status}  ",
+                text=f"  {self.STATUS_ICONS.get(status, '')} {status}  ",
                 bg=colors["bg"], fg="white",
                 activebackground=colors["activebg"], activeforeground="white",
                 font=("Arial", 10, "bold"),

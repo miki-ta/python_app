@@ -1,0 +1,79 @@
+[
+  {
+    "timestamp": "2026-06-27 11:50:36",
+    "action": "作成",
+    "task_id": "TASK-001",
+    "task_title": "Pythonの教科書",
+    "detail": "担当者:未割り当て 優先度:中 期限:2026-06-27"
+  },
+  {
+    "timestamp": "2026-06-27 11:51:06",
+    "action": "作成",
+    "task_id": "TASK-002",
+    "task_title": "Pythonの教科書",
+    "detail": "担当者:未割り当て 優先度:中 期限:-"
+  },
+  {
+    "timestamp": "2026-06-27 11:51:21",
+    "action": "編集",
+    "task_id": "TASK-001",
+    "task_title": "Pythonの教科書",
+    "detail": "期限:2026-06-27→2026-06-26"
+  },
+  {
+    "timestamp": "2026-06-27 11:52:04",
+    "action": "担当者変更",
+    "task_id": "TASK-001",
+    "task_title": "Pythonの教科書",
+    "detail": "未割り当て → あああ"
+  },
+  {
+    "timestamp": "2026-06-27 11:52:08",
+    "action": "担当者変更",
+    "task_id": "TASK-002",
+    "task_title": "Pythonの教科書",
+    "detail": "未割り当て → いいい"
+  },
+  {
+    "timestamp": "2026-06-27 11:52:47",
+    "action": "作成",
+    "task_id": "TASK-003",
+    "task_title": "グループ TODOの履歴管理",
+    "detail": "担当者:未割り当て 優先度:高 期限:-"
+  },
+  {
+    "timestamp": "2026-06-27 11:52:54",
+    "action": "状態変更",
+    "task_id": "TASK-003",
+    "task_title": "グループ TODOの履歴管理",
+    "detail": "未対応 → 未対応"
+  },
+  {
+    "timestamp": "2026-06-27 11:52:57",
+    "action": "状態変更",
+    "task_id": "TASK-003",
+    "task_title": "グループ TODOの履歴管理",
+    "detail": "未対応 → 処理中"
+  },
+  {
+    "timestamp": "2026-06-27 11:57:23",
+    "action": "状態変更",
+    "task_id": "TASK-001",
+    "task_title": "Pythonの教科書",
+    "detail": "未対応 → 完了"
+  },
+  {
+    "timestamp": "2026-06-29 18:13:10",
+    "action": "状態変更",
+    "task_id": "TASK-002",
+    "task_title": "Pythonの教科書",
+    "detail": "未対応 → 完了"
+  },
+  {
+    "timestamp": "2026-06-29 18:13:27",
+    "action": "状態変更",
+    "task_id": "TASK-001",
+    "task_title": "Pythonの教科書",
+    "detail": "完了 → 未対応"
+  }
+]

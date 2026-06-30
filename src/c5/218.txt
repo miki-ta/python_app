@@ -1,0 +1,5 @@
+﻿
+export PYTHONIOENCODING='utf-8'
+
+
+$ python kakugen.py

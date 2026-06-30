@@ -8,7 +8,6 @@ from tkinter import ttk, messagebox, simpledialog
 from dataclasses import dataclass, asdict
 from pathlib import Path
 import json
-import sqlite3
 from datetime import datetime, timedelta
 import calendar
 
@@ -39,203 +38,137 @@ class HistoryEntry:
     detail: str       # 変更内容の説明
 
 
-# ===================== データベース操作 =====================
+# ===================== データ操作（JSON） =====================
 
-DATA_DIR = Path(__file__).parent / "data"
-DB_FILE  = DATA_DIR / "tasks.db"
-
-# 旧JSONファイルパス（初回起動時のマイグレーション用）
-_LEGACY_TASKS     = DATA_DIR / "tasks.json"
-_LEGACY_ASSIGNEES = DATA_DIR / "assignees.json"
-_LEGACY_HISTORY   = DATA_DIR / "history.json"
-_LEGACY_COUNTER   = DATA_DIR / "counter.json"
-_LEGACY_TRASH     = DATA_DIR / "trash.json"
+DATA_DIR          = Path(__file__).parent / "data"
+GT_TASKS_FILE     = DATA_DIR / "gt_tasks.json"
+GT_ASSIGNEES_FILE = DATA_DIR / "gt_assignees.json"
+GT_HISTORY_FILE   = DATA_DIR / "gt_history.json"
+GT_COUNTER_FILE   = DATA_DIR / "gt_counter.json"
+GT_TRASH_FILE     = DATA_DIR / "gt_trash.json"
+_GT_DB_FILE       = DATA_DIR / "tasks.db"   # 旧SQLite（移行元）
 
 
-def _get_conn() -> sqlite3.Connection:
-    """SQLite接続を返す。30秒ロック待機で同時アクセスに対応"""
-    conn = sqlite3.connect(str(DB_FILE), timeout=30)
-    conn.row_factory = sqlite3.Row
-    return conn
+def _load_json(path: Path, default):
+    if path.exists():
+        try:
+            return json.loads(path.read_text(encoding='utf-8'))
+        except Exception:
+            return default
+    return default
 
 
-def ensure_db() -> None:
-    """テーブルを作成し、旧JSONデータが存在すれば移行する"""
+def _save_json(path: Path, data) -> None:
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
+
+
+def _dict_to_task(d: dict) -> Task:
+    return Task(
+        task_id=d.get('task_id', ''),
+        title=d.get('title', ''),
+        assignee=d.get('assignee', ''),
+        status=d.get('status', '未対応'),
+        priority=d.get('priority', '中'),
+        start_date=d.get('start_date', '-'),
+        due_date=d.get('due_date', '-'),
+        memo=d.get('memo', ''),
+        created_at=d.get('created_at', ''),
+        updated_at=d.get('updated_at', ''),
+    )
+
+
+def ensure_data() -> None:
+    """データフォルダとJSONファイルを初期化し、旧SQLiteがあれば移行する"""
     DATA_DIR.mkdir(exist_ok=True)
-    conn = _get_conn()
+    if not GT_TASKS_FILE.exists():
+        _save_json(GT_TASKS_FILE, [])
+    if not GT_ASSIGNEES_FILE.exists():
+        _save_json(GT_ASSIGNEES_FILE, ["未割り当て"])
+    if not GT_HISTORY_FILE.exists():
+        _save_json(GT_HISTORY_FILE, [])
+    if not GT_COUNTER_FILE.exists():
+        _save_json(GT_COUNTER_FILE, {"counter": 0})
+    if not GT_TRASH_FILE.exists():
+        _save_json(GT_TRASH_FILE, [])
+    _migrate_from_sqlite()
+
+
+def _migrate_from_sqlite() -> None:
+    """旧SQLite（tasks.db）からJSONへ一度だけ移行する"""
+    if not _GT_DB_FILE.exists():
+        return
     try:
-        # WALモードを試みる（ローカルドライブでの並行読み取りを高速化）
-        # ネットワーク共有では使えない場合があるが、失敗しても動作する
+        import sqlite3 as _sq
+        conn = _sq.connect(str(_GT_DB_FILE), timeout=5)
+        conn.row_factory = _sq.Row
+
         try:
-            conn.execute("PRAGMA journal_mode=WAL")
+            rows = conn.execute("SELECT * FROM tasks").fetchall()
+            existing = {t['task_id'] for t in _load_json(GT_TASKS_FILE, [])}
+            tasks = _load_json(GT_TASKS_FILE, [])
+            for row in rows:
+                d = dict(row)
+                if d['task_id'] not in existing:
+                    tasks.append(d)
+            _save_json(GT_TASKS_FILE, tasks)
         except Exception:
             pass
-        conn.executescript("""
-            CREATE TABLE IF NOT EXISTS tasks (
-                task_id    TEXT PRIMARY KEY,
-                title      TEXT NOT NULL DEFAULT '',
-                assignee   TEXT NOT NULL DEFAULT '',
-                status     TEXT NOT NULL DEFAULT '未対応',
-                priority   TEXT NOT NULL DEFAULT '中',
-                start_date TEXT NOT NULL DEFAULT '-',
-                due_date   TEXT NOT NULL DEFAULT '-',
-                memo       TEXT NOT NULL DEFAULT '',
-                created_at TEXT NOT NULL DEFAULT '',
-                updated_at TEXT NOT NULL DEFAULT ''
-            );
-            CREATE TABLE IF NOT EXISTS assignees (
-                name TEXT PRIMARY KEY
-            );
-            CREATE TABLE IF NOT EXISTS history (
-                id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                timestamp  TEXT NOT NULL,
-                action     TEXT NOT NULL,
-                task_id    TEXT NOT NULL,
-                task_title TEXT NOT NULL,
-                detail     TEXT NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS counter (
-                id    INTEGER PRIMARY KEY,
-                value INTEGER NOT NULL DEFAULT 0
-            );
-            CREATE TABLE IF NOT EXISTS trash (
-                task_id    TEXT PRIMARY KEY,
-                title      TEXT NOT NULL DEFAULT '',
-                assignee   TEXT NOT NULL DEFAULT '',
-                status     TEXT NOT NULL DEFAULT '未対応',
-                priority   TEXT NOT NULL DEFAULT '中',
-                start_date TEXT NOT NULL DEFAULT '-',
-                due_date   TEXT NOT NULL DEFAULT '-',
-                memo       TEXT NOT NULL DEFAULT '',
-                created_at TEXT NOT NULL DEFAULT '',
-                updated_at TEXT NOT NULL DEFAULT ''
-            );
-            INSERT OR IGNORE INTO counter (id, value) VALUES (1, 0);
-            INSERT OR IGNORE INTO assignees (name) VALUES ('未割り当て');
-        """)
-        conn.commit()
-        # 既存DBに updated_at カラムがなければ追加（バージョンアップ時のマイグレーション）
-        for table in ("tasks", "trash"):
-            try:
-                conn.execute(f"ALTER TABLE {table} ADD COLUMN updated_at TEXT NOT NULL DEFAULT ''")
-                conn.commit()
-            except Exception:
-                pass  # カラムが既に存在する場合は無視
-        _migrate_from_json(conn)
-    finally:
+
+        try:
+            rows = conn.execute("SELECT name FROM assignees ORDER BY rowid").fetchall()
+            names = [row['name'] for row in rows]
+            if names:
+                _save_json(GT_ASSIGNEES_FILE, names)
+        except Exception:
+            pass
+
+        try:
+            rows = conn.execute(
+                "SELECT timestamp, action, task_id, task_title, detail FROM history ORDER BY id"
+            ).fetchall()
+            _save_json(GT_HISTORY_FILE, [dict(r) for r in rows])
+        except Exception:
+            pass
+
+        try:
+            row = conn.execute("SELECT value FROM counter WHERE id = 1").fetchone()
+            if row:
+                _save_json(GT_COUNTER_FILE, {"counter": row['value']})
+        except Exception:
+            pass
+
+        try:
+            rows = conn.execute("SELECT * FROM trash").fetchall()
+            _save_json(GT_TRASH_FILE, [dict(r) for r in rows])
+        except Exception:
+            pass
+
         conn.close()
+        _GT_DB_FILE.rename(_GT_DB_FILE.with_suffix('.db.bak'))
+    except Exception:
+        pass
 
 
-def _migrate_from_json(conn: sqlite3.Connection) -> None:
-    """旧JSONファイルをSQLiteへ移行し、元ファイルを .bak にリネームする"""
-    migrated = False
-
-    if _LEGACY_TASKS.exists():
-        try:
-            data = json.loads(_LEGACY_TASKS.read_text(encoding='utf-8'))
-            for item in data:
-                conn.execute("""
-                    INSERT OR IGNORE INTO tasks
-                    (task_id, title, assignee, status, priority,
-                     start_date, due_date, memo, created_at)
-                    VALUES (:task_id,:title,:assignee,:status,:priority,
-                            :start_date,:due_date,:memo,:created_at)
-                """, {k: item.get(k, '') for k in
-                      ('task_id','title','assignee','status','priority',
-                       'start_date','due_date','memo','created_at')})
-            migrated = True
-        except Exception:
-            pass
-
-    if _LEGACY_ASSIGNEES.exists():
-        try:
-            names = json.loads(_LEGACY_ASSIGNEES.read_text(encoding='utf-8'))
-            for name in names:
-                conn.execute("INSERT OR IGNORE INTO assignees (name) VALUES (?)", (name,))
-            migrated = True
-        except Exception:
-            pass
-
-    if _LEGACY_HISTORY.exists():
-        try:
-            entries = json.loads(_LEGACY_HISTORY.read_text(encoding='utf-8'))
-            for e in entries:
-                conn.execute("""
-                    INSERT INTO history (timestamp, action, task_id, task_title, detail)
-                    VALUES (:timestamp,:action,:task_id,:task_title,:detail)
-                """, {k: e.get(k, '') for k in
-                      ('timestamp','action','task_id','task_title','detail')})
-            migrated = True
-        except Exception:
-            pass
-
-    if _LEGACY_COUNTER.exists():
-        try:
-            val = json.loads(_LEGACY_COUNTER.read_text(encoding='utf-8')).get('counter', 0)
-            row = conn.execute(
-                "SELECT MAX(CAST(SUBSTR(task_id,6) AS INTEGER)) FROM tasks"
-            ).fetchone()
-            max_from_tasks = row[0] or 0
-            conn.execute(
-                "UPDATE counter SET value = MAX(value, ?) WHERE id = 1",
-                (max(val, max_from_tasks),)
-            )
-            migrated = True
-        except Exception:
-            pass
-
-    if _LEGACY_TRASH.exists():
-        try:
-            data = json.loads(_LEGACY_TRASH.read_text(encoding='utf-8'))
-            for item in data:
-                conn.execute("""
-                    INSERT OR IGNORE INTO trash
-                    (task_id, title, assignee, status, priority,
-                     start_date, due_date, memo, created_at)
-                    VALUES (:task_id,:title,:assignee,:status,:priority,
-                            :start_date,:due_date,:memo,:created_at)
-                """, {k: item.get(k, '') for k in
-                      ('task_id','title','assignee','status','priority',
-                       'start_date','due_date','memo','created_at')})
-            migrated = True
-        except Exception:
-            pass
-
-    if migrated:
-        conn.commit()
-        for f in [_LEGACY_TASKS, _LEGACY_ASSIGNEES,
-                  _LEGACY_HISTORY, _LEGACY_COUNTER, _LEGACY_TRASH]:
-            if f.exists():
-                f.rename(f.with_suffix('.json.bak'))
-
-
-# ── タスクID採番（排他ロックでアトミックにインクリメント） ──
+# ── タスクID採番 ──
 
 def next_task_id() -> str:
-    """同時アクセスしても重複しないタスクIDを返す"""
-    conn = _get_conn()
-    try:
-        conn.execute("BEGIN EXCLUSIVE")
-        conn.execute("UPDATE counter SET value = value + 1 WHERE id = 1")
-        row = conn.execute("SELECT value FROM counter WHERE id = 1").fetchone()
-        conn.execute("COMMIT")
-        return f"TASK-{row['value']:03d}"
-    except Exception:
+    data = _load_json(GT_COUNTER_FILE, {"counter": 0})
+    tasks = _load_json(GT_TASKS_FILE, [])
+    max_from_tasks = 0
+    for t in tasks:
         try:
-            conn.execute("ROLLBACK")
+            max_from_tasks = max(max_from_tasks, int(t['task_id'].split('-')[1]))
         except Exception:
             pass
-        raise
-    finally:
-        conn.close()
+    counter = max(data.get('counter', 0), max_from_tasks) + 1
+    _save_json(GT_COUNTER_FILE, {"counter": counter})
+    return f"TASK-{counter:03d}"
 
 
 # ── タスク CRUD ──
 
 def load_tasks() -> list[Task]:
-    with _get_conn() as conn:
-        rows = conn.execute("SELECT * FROM tasks").fetchall()
-        return [Task(**dict(row)) for row in rows]
+    return [_dict_to_task(d) for d in _load_json(GT_TASKS_FILE, [])]
 
 
 def add_task_to_db(task: Task) -> bool:
@@ -244,14 +177,11 @@ def add_task_to_db(task: Task) -> bool:
     if not task.created_at:
         task.created_at = now
     try:
-        with _get_conn() as conn:
-            conn.execute("""
-                INSERT INTO tasks
-                (task_id, title, assignee, status, priority,
-                 start_date, due_date, memo, created_at, updated_at)
-                VALUES (:task_id,:title,:assignee,:status,:priority,
-                        :start_date,:due_date,:memo,:created_at,:updated_at)
-            """, asdict(task))
+        tasks = _load_json(GT_TASKS_FILE, [])
+        if any(t['task_id'] == task.task_id for t in tasks):
+            return False
+        tasks.append(asdict(task))
+        _save_json(GT_TASKS_FILE, tasks)
         return True
     except Exception as e:
         messagebox.showerror("保存エラー", f"タスク保存に失敗しました:\n{e}")
@@ -261,129 +191,90 @@ def add_task_to_db(task: Task) -> bool:
 # update_task_in_db の戻り値:
 #   "ok"       → 保存成功
 #   "conflict" → 他のユーザーが同じタスクを先に更新していた（楽観的ロック失敗）
-#   "error"    → DBエラー
+#   "error"    → エラー
 def update_task_in_db(task: Task, expected_updated_at: str = "") -> str:
     """楽観的ロック付きタスク更新。expected_updated_at が空の場合はロックチェックを省略する"""
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    conn = _get_conn()
     try:
-        conn.execute("BEGIN EXCLUSIVE")
-        if expected_updated_at:
-            row = conn.execute(
-                "SELECT updated_at FROM tasks WHERE task_id = ?", (task.task_id,)
-            ).fetchone()
-            if row is None:
-                conn.execute("ROLLBACK")
-                return "error"
-            if row["updated_at"] != expected_updated_at:
-                conn.execute("ROLLBACK")
-                return "conflict"
+        tasks = _load_json(GT_TASKS_FILE, [])
+        idx = next((i for i, t in enumerate(tasks) if t['task_id'] == task.task_id), None)
+        if idx is None:
+            return "error"
+        if expected_updated_at and tasks[idx].get('updated_at', '') != expected_updated_at:
+            return "conflict"
         task.updated_at = now
-        conn.execute("""
-            UPDATE tasks
-            SET title=:title, assignee=:assignee, status=:status,
-                priority=:priority, start_date=:start_date, due_date=:due_date,
-                memo=:memo, created_at=:created_at, updated_at=:updated_at
-            WHERE task_id=:task_id
-        """, asdict(task))
-        conn.execute("COMMIT")
+        tasks[idx] = asdict(task)
+        _save_json(GT_TASKS_FILE, tasks)
         return "ok"
     except Exception as e:
-        try:
-            conn.execute("ROLLBACK")
-        except Exception:
-            pass
         messagebox.showerror("保存エラー", f"タスク更新に失敗しました:\n{e}")
         return "error"
-    finally:
-        conn.close()
 
 
 def delete_tasks_from_db(task_ids: list[str]) -> bool:
     try:
-        with _get_conn() as conn:
-            conn.executemany(
-                "DELETE FROM tasks WHERE task_id = ?",
-                [(tid,) for tid in task_ids]
-            )
+        tasks = _load_json(GT_TASKS_FILE, [])
+        tasks = [t for t in tasks if t['task_id'] not in task_ids]
+        _save_json(GT_TASKS_FILE, tasks)
         return True
     except Exception as e:
         messagebox.showerror("削除エラー", f"タスク削除に失敗しました:\n{e}")
         return False
 
 
-def move_tasks_to_trash(tasks: list[Task]) -> bool:
-    """タスクの削除とゴミ箱追加を単一トランザクションで行う（永久消失防止）"""
-    conn = _get_conn()
+def move_tasks_to_trash(tasks_to_move: list[Task]) -> bool:
     try:
-        conn.execute("BEGIN EXCLUSIVE")
-        for task in tasks:
-            conn.execute("DELETE FROM tasks WHERE task_id = ?", (task.task_id,))
-            conn.execute("""
-                INSERT OR REPLACE INTO trash
-                (task_id, title, assignee, status, priority,
-                 start_date, due_date, memo, created_at, updated_at)
-                VALUES (:task_id,:title,:assignee,:status,:priority,
-                        :start_date,:due_date,:memo,:created_at,:updated_at)
-            """, asdict(task))
-        conn.execute("COMMIT")
+        ids = {t.task_id for t in tasks_to_move}
+        tasks = _load_json(GT_TASKS_FILE, [])
+        tasks = [t for t in tasks if t['task_id'] not in ids]
+        _save_json(GT_TASKS_FILE, tasks)
+
+        trash = _load_json(GT_TRASH_FILE, [])
+        existing_ids = {t['task_id'] for t in trash}
+        for task in tasks_to_move:
+            d = asdict(task)
+            if d['task_id'] in existing_ids:
+                trash = [t for t in trash if t['task_id'] != d['task_id']]
+            trash.append(d)
+        _save_json(GT_TRASH_FILE, trash)
         return True
     except Exception as e:
-        try:
-            conn.execute("ROLLBACK")
-        except Exception:
-            pass
         messagebox.showerror("削除エラー", f"タスク削除に失敗しました:\n{e}")
         return False
-    finally:
-        conn.close()
 
 
 # ── 担当者 CRUD ──
 
 def load_assignees() -> list[str]:
-    with _get_conn() as conn:
-        rows = conn.execute("SELECT name FROM assignees ORDER BY rowid").fetchall()
-        result = [row['name'] for row in rows]
-        return result if result else ["未割り当て"]
+    result = _load_json(GT_ASSIGNEES_FILE, ["未割り当て"])
+    return result if result else ["未割り当て"]
 
 
 def save_assignees(assignees: list[str]) -> bool:
-    conn = _get_conn()
     try:
-        conn.execute("BEGIN EXCLUSIVE")
-        conn.execute("DELETE FROM assignees")
-        conn.executemany(
-            "INSERT INTO assignees (name) VALUES (?)",
-            [(a,) for a in assignees]
-        )
-        conn.execute("COMMIT")
+        _save_json(GT_ASSIGNEES_FILE, assignees)
         return True
     except Exception as e:
-        try:
-            conn.execute("ROLLBACK")
-        except Exception:
-            pass
         messagebox.showerror("保存エラー", f"担当者リスト保存に失敗しました:\n{e}")
         return False
-    finally:
-        conn.close()
 
 
 # ── 履歴 ──
 
 def load_history() -> list[HistoryEntry]:
-    with _get_conn() as conn:
-        rows = conn.execute(
-            "SELECT timestamp, action, task_id, task_title, detail "
-            "FROM history ORDER BY id"
-        ).fetchall()
-        return [HistoryEntry(**dict(row)) for row in rows]
+    data = _load_json(GT_HISTORY_FILE, [])
+    return [HistoryEntry(
+        timestamp=d.get('timestamp', ''),
+        action=d.get('action', ''),
+        task_id=d.get('task_id', ''),
+        task_title=d.get('task_title', ''),
+        detail=d.get('detail', ''),
+    ) for d in data]
 
 
 def add_history(history: list[HistoryEntry], action: str,
                 task_id: str, task_title: str, detail: str) -> None:
-    """DBに履歴を書き込み、インメモリリストにも追記する"""
+    """JSONに履歴を書き込み、インメモリリストにも追記する"""
     entry = HistoryEntry(
         timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         action=action,
@@ -392,73 +283,55 @@ def add_history(history: list[HistoryEntry], action: str,
         detail=detail,
     )
     try:
-        with _get_conn() as conn:
-            conn.execute("""
-                INSERT INTO history (timestamp, action, task_id, task_title, detail)
-                VALUES (:timestamp,:action,:task_id,:task_title,:detail)
-            """, asdict(entry))
-            # 最新1000件に制限
-            conn.execute("""
-                DELETE FROM history
-                WHERE id NOT IN (SELECT id FROM history ORDER BY id DESC LIMIT 1000)
-            """)
+        entries = _load_json(GT_HISTORY_FILE, [])
+        entries.append(asdict(entry))
+        if len(entries) > 1000:
+            entries = entries[-1000:]
+        _save_json(GT_HISTORY_FILE, entries)
     except Exception:
-        pass  # 履歴失敗は主機能に影響させない
+        pass
     history.append(entry)
 
 
 # ── ゴミ箱 ──
 
 def load_trash() -> list[Task]:
-    with _get_conn() as conn:
-        rows = conn.execute("SELECT * FROM trash").fetchall()
-        return [Task(**dict(row)) for row in rows]
+    return [_dict_to_task(d) for d in _load_json(GT_TRASH_FILE, [])]
 
 
 def add_to_trash(task: Task) -> bool:
     try:
-        with _get_conn() as conn:
-            conn.execute("""
-                INSERT OR REPLACE INTO trash
-                (task_id, title, assignee, status, priority,
-                 start_date, due_date, memo, created_at, updated_at)
-                VALUES (:task_id,:title,:assignee,:status,:priority,
-                        :start_date,:due_date,:memo,:created_at,:updated_at)
-            """, asdict(task))
+        trash = _load_json(GT_TRASH_FILE, [])
+        trash = [t for t in trash if t['task_id'] != task.task_id]
+        trash.append(asdict(task))
+        _save_json(GT_TRASH_FILE, trash)
         return True
     except Exception:
         return False
 
 
 def restore_from_trash(task_id: str) -> bool:
-    """ゴミ箱 → アクティブタスクへのアトミックな移動"""
-    conn = _get_conn()
     try:
-        with conn:
-            row = conn.execute(
-                "SELECT * FROM trash WHERE task_id = ?", (task_id,)
-            ).fetchone()
-            if not row:
-                return False
-            conn.execute("""
-                INSERT OR REPLACE INTO tasks
-                (task_id, title, assignee, status, priority,
-                 start_date, due_date, memo, created_at, updated_at)
-                VALUES (:task_id,:title,:assignee,:status,:priority,
-                        :start_date,:due_date,:memo,:created_at,:updated_at)
-            """, dict(row))
-            conn.execute("DELETE FROM trash WHERE task_id = ?", (task_id,))
+        trash = _load_json(GT_TRASH_FILE, [])
+        task_data = next((t for t in trash if t['task_id'] == task_id), None)
+        if not task_data:
+            return False
+        tasks = _load_json(GT_TASKS_FILE, [])
+        tasks = [t for t in tasks if t['task_id'] != task_id]
+        tasks.append(task_data)
+        _save_json(GT_TASKS_FILE, tasks)
+        trash = [t for t in trash if t['task_id'] != task_id]
+        _save_json(GT_TRASH_FILE, trash)
         return True
     except Exception:
         return False
-    finally:
-        conn.close()
 
 
 def delete_from_trash(task_id: str) -> bool:
     try:
-        with _get_conn() as conn:
-            conn.execute("DELETE FROM trash WHERE task_id = ?", (task_id,))
+        trash = _load_json(GT_TRASH_FILE, [])
+        trash = [t for t in trash if t['task_id'] != task_id]
+        _save_json(GT_TRASH_FILE, trash)
         return True
     except Exception:
         return False
@@ -969,7 +842,7 @@ class TodoApp:
         self.root.geometry("1200x700")
         self.root.minsize(900, 500)
 
-        ensure_db()
+        ensure_data()
 
         self.tasks     = load_tasks()
         self.assignees = load_assignees()
@@ -1363,7 +1236,7 @@ class TodoApp:
             return False
 
     def _start_auto_refresh(self, interval_ms: int = 30_000):
-        """30秒ごとに担当者・ゴミ箱・タスクをDBから再読込する（他ユーザーの変更を反映）"""
+        """30秒ごとに担当者・ゴミ箱・タスクをJSONから再読込する（他ユーザーの変更を反映）"""
         self.assignees = load_assignees()
         self.trash     = load_trash()
         self.refresh_table()

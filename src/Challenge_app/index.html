@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>タスク管理アプリ — はじめてガイド</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --purple: #7B2FBE;
+      --pink:   #E91E8C;
+      --orange: #FF6B35;
+      --teal:   #00B4D8;
+      --green:  #2DC653;
+      --indigo: #4361EE;
+      --red:    #EF233C;
+      --yellow: #F8C51B;
+      --dark:   #1A1A2E;
+      --text:   #2D3748;
+      --light:  #F7F9FC;
+      --border: #E2E8F0;
+    }
+
+    body {
+      font-family: "Helvetica Neue", Arial, "Hiragino Sans", "Yu Gothic", sans-serif;
+      background: var(--light);
+      color: var(--text);
+      line-height: 1.8;
+      font-size: 16px;
+    }
+
+    /* ===== HERO ===== */
+    .hero {
+      position: relative;
+      min-height: 540px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      padding: 80px 24px 70px;
+      text-align: center;
+    }
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      background-image: url('https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b?w=1400&q=80');
+      background-size: cover;
+      background-position: center;
+      filter: brightness(0.25);
+    }
+    .hero-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg,
+        rgba(123,47,190,.75) 0%,
+        rgba(67,97,238,.7)   50%,
+        rgba(0,180,216,.55)  100%);
+    }
+    .hero-content { position: relative; z-index: 1; }
+    .hero-badge {
+      display: inline-block;
+      background: rgba(255,255,255,.15);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,.3);
+      color: white;
+      padding: 6px 20px;
+      border-radius: 20px;
+      font-size: .85rem;
+      margin-bottom: 22px;
+      letter-spacing: .05em;
+    }
+    .hero .emoji-big { font-size: 4.5rem; display: block; margin-bottom: 14px; }
+    .hero h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      color: white;
+      margin-bottom: 18px;
+      line-height: 1.2;
+    }
+    .hero h1 .accent {
+      background: linear-gradient(90deg, #F8C51B, #FF6B35);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero .sub {
+      font-size: 1.1rem;
+      color: rgba(255,255,255,.9);
+      max-width: 520px;
+      margin: 0 auto 32px;
+    }
+    .hero-btn {
+      display: inline-block;
+      background: linear-gradient(135deg, #F8C51B, #FF6B35);
+      color: white;
+      font-weight: 700;
+      padding: 14px 38px;
+      border-radius: 50px;
+      text-decoration: none;
+      font-size: 1.05rem;
+      box-shadow: 0 4px 24px rgba(255,107,53,.45);
+      transition: transform .2s, box-shadow .2s;
+    }
+    .hero-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 32px rgba(255,107,53,.5); }
+
+    /* ===== STATS BAR ===== */
+    .stats-bar {
+      background: white;
+      border-bottom: 1px solid var(--border);
+    }
+    .stats-inner {
+      max-width: 900px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: center;
+    }
+    .stat-item {
+      flex: 1;
+      max-width: 220px;
+      text-align: center;
+      padding: 22px 16px;
+      border-right: 1px solid var(--border);
+    }
+    .stat-item:last-child { border-right: none; }
+    .stat-num { font-size: 2rem; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+    .stat-label { font-size: .8rem; color: #888; }
+    .c-purple { color: var(--purple); }
+    .c-indigo { color: var(--indigo); }
+    .c-teal   { color: var(--teal); }
+    .c-orange { color: var(--orange); }
+
+    /* ===== SECTION LABELS ===== */
+    .section-label {
+      display: inline-block;
+      font-size: .78rem;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      padding: 4px 14px;
+      border-radius: 12px;
+      margin-bottom: 10px;
+    }
+    .lbl-purple { background: #f3e8ff; color: var(--purple); }
+    .lbl-indigo { background: #e0e7ff; color: var(--indigo); }
+    .lbl-teal   { background: #e0f7fa; color: #0088a3; }
+    .lbl-green  { background: #e8f5e9; color: #1b8a34; }
+    .lbl-orange { background: #fff3e0; color: #c45c1a; }
+    .lbl-pink   { background: #fce4ec; color: #c2185b; }
+    .lbl-white  { background: rgba(255,255,255,.15); color: rgba(255,255,255,.9); }
+
+    h2 {
+      font-size: 1.85rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+      color: var(--dark);
+      line-height: 1.3;
+    }
+    .section-desc { font-size: 1rem; color: #666; margin-bottom: 32px; }
+
+    /* ===== CONTAINERS ===== */
+    .wrap { max-width: 900px; margin: 0 auto; padding: 0 24px; }
+    .band { padding: 64px 0; }
+
+    /* ===== WHAT IS ===== */
+    .what-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      align-items: center;
+    }
+    .photo-card {
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,.15);
+      position: relative;
+    }
+    .photo-card img {
+      width: 100%;
+      height: 290px;
+      object-fit: cover;
+      display: block;
+    }
+    .photo-badge {
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      background: rgba(255,255,255,.95);
+      border-radius: 12px;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: .88rem;
+      font-weight: 700;
+      box-shadow: 0 4px 16px rgba(0,0,0,.1);
+    }
+    .green-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--green); }
+    .use-list { list-style: none; margin: 20px 0; }
+    .use-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: .95rem;
+    }
+    .use-list li:last-child { border-bottom: none; }
+    .use-icon {
+      width: 34px; height: 34px;
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+
+    /* ===== STEPS (light gradient band) ===== */
+    .steps-band { background: linear-gradient(135deg, #f6f0ff 0%, #e8f0ff 100%); }
+    .steps { display: flex; flex-direction: column; gap: 0; }
+    .step {
+      display: flex;
+      gap: 24px;
+      align-items: flex-start;
+      padding: 24px 0;
+      position: relative;
+    }
+    .step:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      left: 20px;
+      top: 66px;
+      bottom: 0;
+      width: 2px;
+      background: linear-gradient(to bottom, rgba(67,97,238,.35), transparent);
+    }
+    .step-num {
+      width: 42px; height: 42px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; font-weight: 800;
+      color: white; flex-shrink: 0;
+      position: relative; z-index: 1;
+      box-shadow: 0 4px 12px rgba(0,0,0,.15);
+    }
+    .step:nth-child(1) .step-num { background: linear-gradient(135deg, #7B2FBE, #4361EE); }
+    .step:nth-child(2) .step-num { background: linear-gradient(135deg, #4361EE, #00B4D8); }
+    .step:nth-child(3) .step-num { background: linear-gradient(135deg, #00B4D8, #2DC653); }
+    .step:nth-child(4) .step-num { background: linear-gradient(135deg, #F8C51B, #FF6B35); }
+    .step-body {
+      background: white;
+      border-radius: 16px;
+      padding: 22px 26px;
+      flex: 1;
+      box-shadow: 0 4px 20px rgba(0,0,0,.06);
+    }
+    .step-body h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 8px; }
+    .step-body p  { font-size: .93rem; color: #555; margin: 0; }
+
+    .run-box {
+      background: #1A1A2E;
+      color: #a8d8a8;
+      font-family: "Consolas", "Courier New", monospace;
+      font-size: .92rem;
+      border-radius: 10px;
+      padding: 18px 22px;
+      margin-top: 14px;
+      line-height: 1.9;
+    }
+    .run-box .comment { color: #6b8caa; }
+    .run-box .cmd     { color: #fff; }
+
+    /* ===== SCREEN LAYOUT / APP MOCKUP ===== */
+    .screen-band { background: white; }
+
+    /* ── 実物スクリーンショット枠 ── */
+    .screenshot-wrap {
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,.22);
+      border: 1px solid #c8d4e0;
+      margin-top: 28px;
+    }
+    .screenshot-bar {
+      background: linear-gradient(90deg, #2d2d2d, #3a3a3a);
+      padding: 10px 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .sc-dot {
+      width: 13px; height: 13px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .sc-red    { background: #FF5F57; }
+    .sc-yellow { background: #FFBD2E; }
+    .sc-green  { background: #28C840; }
+    .sc-title {
+      color: #ccc;
+      font-size: .82rem;
+      margin-left: 10px;
+    }
+    .screenshot-img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+    .app-mockup {
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,.18);
+      border: 1px solid #c8d4e0;
+      margin-top: 28px;
+      font-size: .84rem;
+    }
+    /* title bar */
+    .app-titlebar {
+      background: linear-gradient(90deg, #2d2d2d, #3a3a3a);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .app-dots { display: flex; gap: 7px; }
+    .app-dots span {
+      width: 13px; height: 13px;
+      border-radius: 50%;
+      display: block;
+    }
+    .app-dots span:nth-child(1) { background: #FF5F57; }
+    .app-dots span:nth-child(2) { background: #FEBC2E; }
+    .app-dots span:nth-child(3) { background: #28C840; }
+    .app-wintitle { color: rgba(255,255,255,.65); font-size: .8rem; font-weight: 600; flex: 1; text-align: center; }
+
+    /* toolbar */
+    .app-toolbar {
+      background: #f0f4f8;
+      border-bottom: 1px solid #dde3ea;
+      padding: 9px 14px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .tb-btn {
+      background: white;
+      border: 1px solid #c8d0da;
+      border-radius: 6px;
+      padding: 5px 11px;
+      font-size: .78rem;
+      font-weight: 600;
+      color: #444;
+      white-space: nowrap;
+      cursor: default;
+    }
+    .tb-btn.tb-primary {
+      background: linear-gradient(135deg, #7B2FBE, #4361EE);
+      color: white;
+      border-color: transparent;
+    }
+    .tb-badge {
+      display: inline-block;
+      background: #EF233C;
+      color: white;
+      font-size: .62rem;
+      font-weight: 700;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 16px;
+      margin-left: 2px;
+      vertical-align: middle;
+    }
+    .tb-area-chip {
+      margin-left: auto;
+      background: #7B2FBE;
+      color: white;
+      font-size: .72rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+
+    /* body layout */
+    .app-body { display: flex; background: white; min-height: 210px; }
+
+    /* sidebar */
+    .app-sidebar {
+      width: 148px;
+      flex-shrink: 0;
+      background: #f8f9fc;
+      border-right: 1px solid #e2e8f0;
+      padding: 10px 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .sb-area-chip {
+      align-self: flex-start;
+      background: #4361EE;
+      color: white;
+      font-size: .68rem;
+      font-weight: 700;
+      padding: 2px 9px;
+      border-radius: 20px;
+      margin-bottom: 8px;
+    }
+    .sb-section { font-size: .68rem; font-weight: 700; color: #aaa; letter-spacing: .07em; text-transform: uppercase; margin: 8px 0 3px 4px; }
+    .sb-item {
+      padding: 5px 8px;
+      border-radius: 6px;
+      font-size: .8rem;
+      color: #555;
+      cursor: default;
+    }
+    .sb-item.sb-active { background: #e0e7ff; color: #4361EE; font-weight: 700; }
+    .sb-stat { display: flex; justify-content: space-between; padding: 3px 8px; font-size: .76rem; color: #777; }
+    .sb-stat strong { color: var(--dark); }
+
+    /* main task area */
+    .app-main { flex: 1; padding: 10px 14px; overflow: hidden; }
+    .main-area-chip {
+      display: inline-block;
+      background: #00B4D8;
+      color: white;
+      font-size: .68rem;
+      font-weight: 700;
+      padding: 2px 9px;
+      border-radius: 20px;
+      margin-bottom: 8px;
+    }
+    .mock-table { width: 100%; border-collapse: collapse; }
+    .mock-table th {
+      background: #f0f4f8;
+      font-size: .74rem;
+      font-weight: 700;
+      padding: 7px 8px;
+      text-align: left;
+      color: #555;
+      border-bottom: 1px solid #e2e8f0;
+      white-space: nowrap;
+    }
+    .mock-table td {
+      padding: 7px 8px;
+      font-size: .76rem;
+      color: #444;
+      border-bottom: 1px solid #f0f4f8;
+      white-space: nowrap;
+    }
+    .mock-table tr:last-child td { border-bottom: none; }
+    .mock-row-sel td { background: #eef2ff; }
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: .7rem;
+      font-weight: 700;
+    }
+    .tag-todo { background: #fde8ea; color: #c0392b; }
+    .tag-wip  { background: #fff3cd; color: #8a6500; }
+    .tag-done { background: #d4edda; color: #1b5e20; }
+    .tag-high { background: #fde8ea; color: #c0392b; }
+    .tag-mid  { background: #e3f2fd; color: #1565c0; }
+    .tag-low  { background: #e8f5e9; color: #2e7d32; }
+
+    /* legend below mockup */
+    .mockup-legend {
+      display: flex;
+      gap: 14px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 16px;
+      flex: 1;
+      min-width: 160px;
+    }
+    .legend-num {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .82rem; font-weight: 800;
+      color: white; flex-shrink: 0;
+    }
+    .legend-num.n1 { background: var(--purple); }
+    .legend-num.n2 { background: var(--indigo); }
+    .legend-num.n3 { background: var(--teal); }
+    .legend-title { font-weight: 700; font-size: .9rem; color: var(--dark); }
+    .legend-desc  { font-size: .8rem; color: #777; }
+
+    /* ===== FEATURE CARDS ===== */
+    .cards-band { background: var(--light); }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 24px 20px;
+      border: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+      transition: transform .2s, box-shadow .2s;
+    }
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+    }
+    .card:nth-child(1)::before { background: linear-gradient(90deg, #7B2FBE, #4361EE); }
+    .card:nth-child(2)::before { background: linear-gradient(90deg, #4361EE, #00B4D8); }
+    .card:nth-child(3)::before { background: linear-gradient(90deg, #E91E8C, #FF6B35); }
+    .card:nth-child(4)::before { background: linear-gradient(90deg, #2DC653, #00B4D8); }
+    .card:nth-child(5)::before { background: linear-gradient(90deg, #FF6B35, #F8C51B); }
+    .card:nth-child(6)::before { background: linear-gradient(90deg, #00B4D8, #2DC653); }
+    .card:nth-child(7)::before { background: linear-gradient(90deg, #F8C51B, #E91E8C); }
+    .card:nth-child(8)::before { background: linear-gradient(90deg, #7B2FBE, #E91E8C); }
+    .card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,.1); }
+    .card-icon-wrap {
+      width: 52px; height: 52px;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.6rem;
+      margin-bottom: 14px;
+    }
+    .card:nth-child(1) .card-icon-wrap { background: #f3e8ff; }
+    .card:nth-child(2) .card-icon-wrap { background: #e0e7ff; }
+    .card:nth-child(3) .card-icon-wrap { background: #fce4ec; }
+    .card:nth-child(4) .card-icon-wrap { background: #e8f5e9; }
+    .card:nth-child(5) .card-icon-wrap { background: #fff3e0; }
+    .card:nth-child(6) .card-icon-wrap { background: #e0f7fa; }
+    .card:nth-child(7) .card-icon-wrap { background: #fffde7; }
+    .card:nth-child(8) .card-icon-wrap { background: #f3e8ff; }
+    .card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 8px; color: var(--dark); }
+    .card p  { font-size: .88rem; color: #666; margin: 0; line-height: 1.7; }
+
+    /* ===== STATUS DARK BAND ===== */
+    .status-band { background: linear-gradient(135deg, #1A1A2E 0%, #16213E 100%); }
+    .status-band h2     { color: white; }
+    .status-band .section-desc { color: rgba(255,255,255,.55); }
+    .status-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 36px;
+      margin-top: 8px;
+    }
+    .sub-title {
+      font-size: .82rem; font-weight: 700;
+      letter-spacing: .09em; text-transform: uppercase;
+      color: rgba(255,255,255,.55);
+      margin-bottom: 14px;
+    }
+    .status-list { display: flex; flex-direction: column; gap: 12px; }
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 12px;
+      padding: 14px 18px;
+    }
+    .s-icon {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; flex-shrink: 0;
+    }
+    .s-todo { background: rgba(239,35,60,.18);  border: 2px solid rgba(239,35,60,.4);  color: #EF233C; }
+    .s-wip  { background: rgba(248,197,27,.18); border: 2px solid rgba(248,197,27,.4); color: #F8C51B; }
+    .s-done { background: rgba(45,198,83,.18);  border: 2px solid rgba(45,198,83,.4);  color: #2DC653; }
+    .s-label { font-weight: 700; color: white; font-size: .97rem; }
+    .s-desc  { font-size: .82rem; color: rgba(255,255,255,.45); }
+
+    .pri-list { display: flex; flex-direction: column; gap: 12px; }
+    .pri-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 12px;
+      padding: 14px 18px;
+    }
+    .pri-left { display: flex; align-items: center; gap: 12px; }
+    .pri-badge {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 1rem;
+    }
+    .pri-high .pri-badge { background: rgba(239,35,60,.18);  border: 2px solid rgba(239,35,60,.4);  color: #EF233C; }
+    .pri-mid  .pri-badge { background: rgba(248,197,27,.18); border: 2px solid rgba(248,197,27,.4); color: #F8C51B; }
+    .pri-low  .pri-badge { background: rgba(45,198,83,.18);  border: 2px solid rgba(45,198,83,.4);  color: #2DC653; }
+    .pri-name { font-weight: 700; color: white; }
+    .pri-desc { font-size: .82rem; color: rgba(255,255,255,.45); }
+
+    /* ===== DATA SECTION ===== */
+    .data-band { background: white; }
+    .file-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    .file-table th, .file-table td {
+      text-align: left;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      font-size: .93rem;
+    }
+    .file-table th {
+      background: linear-gradient(90deg, #f3e8ff, #e0e7ff);
+      font-weight: 700;
+      color: var(--dark);
+    }
+    .file-table tr:hover td { background: #fafbff; }
+    code {
+      background: #f0e7ff;
+      color: var(--purple);
+      padding: 2px 8px;
+      border-radius: 5px;
+      font-family: "Consolas", "Courier New", monospace;
+      font-size: .87em;
+      font-weight: 600;
+    }
+
+    /* ===== TIP ===== */
+    .tip {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background: linear-gradient(135deg, #fffde7, #fff8e1);
+      border: 1px solid #FFE082;
+      border-radius: 12px;
+      padding: 16px 20px;
+      font-size: .93rem;
+      margin-top: 16px;
+    }
+    .tip-icon { font-size: 1.3rem; flex-shrink: 0; }
+    .tip strong { color: #b45309; }
+
+    /* ===== FAQ ===== */
+    .faq-band { background: linear-gradient(135deg, #f6f0ff, #e8f0ff); }
+    .faq { display: flex; flex-direction: column; gap: 14px; }
+    .faq-item {
+      background: white;
+      border-radius: 14px;
+      padding: 20px 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.05);
+      border-left: 4px solid transparent;
+      transition: transform .15s;
+    }
+    .faq-item:nth-child(1) { border-left-color: var(--purple); }
+    .faq-item:nth-child(2) { border-left-color: var(--indigo); }
+    .faq-item:nth-child(3) { border-left-color: var(--teal); }
+    .faq-item:nth-child(4) { border-left-color: var(--green); }
+    .faq-item:nth-child(5) { border-left-color: var(--orange); }
+    .faq-item:hover { transform: translateX(5px); }
+    .faq-item .faq-q { font-weight: 700; color: var(--dark); margin-bottom: 8px; }
+    .faq-item .faq-a { font-size: .93rem; color: #555; margin: 0; }
+
+    /* ===== FOOTER ===== */
+    footer {
+      background: linear-gradient(135deg, #1A1A2E, #4361EE);
+      color: rgba(255,255,255,.7);
+      text-align: center;
+      padding: 44px 24px;
+      font-size: .92rem;
+    }
+    footer .footer-emoji { font-size: 2.2rem; margin-bottom: 12px; display: block; }
+    footer strong { color: white; }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 640px) {
+      .hero h1   { font-size: 2.1rem; }
+      .what-grid { grid-template-columns: 1fr; }
+      .photo-card { display: none; }
+      .stats-inner { flex-wrap: wrap; }
+      .stat-item { min-width: 50%; border-right: none; border-bottom: 1px solid var(--border); }
+      .status-grid { grid-template-columns: 1fr; }
+      .flow { gap: 8px; }
+      .flow-arrow { padding: 0 4px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ========== HERO ========== -->
+<div class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-overlay"></div>
+  <div class="hero-content">
+    <div class="hero-badge">🐍 Python / Tkinter 製デスクトップアプリ</div>
+    <span class="emoji-big">📋</span>
+    <h1>タスク管理<br><span class="accent">アプリ</span></h1>
+    <p class="sub">
+      「やること」を一覧でスッキリ管理。<br>
+      <strong>Python さえあれば今すぐ使えます！</strong>
+    </p>
+    <a href="#start" class="hero-btn">▶ 使い始める</a>
+  </div>
+</div>
+
+<!-- ========== STATS BAR ========== -->
+<div class="stats-bar">
+  <div class="stats-inner">
+    <div class="stat-item">
+      <div class="stat-num c-purple">8</div>
+      <div class="stat-label">主な機能</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num c-indigo">3</div>
+      <div class="stat-label">ステータス</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num c-teal">3</div>
+      <div class="stat-label">優先度</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num c-orange">0</div>
+      <div class="stat-label">追加ライブラリ</div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== WHAT IS ========== -->
+<div class="band" style="background: white;">
+  <div class="wrap">
+    <div class="what-grid">
+      <div>
+        <span class="section-label lbl-purple">🙋 このアプリについて</span>
+        <h2>タスクをまとめて<br>スッキリ管理</h2>
+        <p class="section-desc">締め切り・担当者・メモ・コメントを一元管理。期限前には通知してくれます。</p>
+
+        <ul class="use-list">
+          <li>
+            <div class="use-icon" style="background:#f3e8ff;">📚</div>
+            <span>学校のレポートや仕事の作業をリスト化して管理したい</span>
+          </li>
+          <li>
+            <div class="use-icon" style="background:#e0e7ff;">👥</div>
+            <span>複数人で担当を分けてタスクを進めたい</span>
+          </li>
+          <li>
+            <div class="use-icon" style="background:#e0f7fa;">⏰</div>
+            <span>期限を忘れないようにリマインダーをセットしたい</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="photo-card">
+        <img
+          src="https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b?w=600&q=80"
+          alt="タスク管理のイメージ"
+        />
+        <div class="photo-badge">
+          <div class="green-dot"></div>
+          <span>完全オフライン動作</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== STEPS ========== -->
+<div class="band steps-band" id="start">
+  <div class="wrap">
+    <span class="section-label lbl-indigo">🚀 スタートガイド</span>
+    <h2>4ステップで起動</h2>
+    <p class="section-desc">難しい設定は不要！Python があれば今すぐ使えます。</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h3>Python をインストールする</h3>
+          <p>まだ Python が入っていない場合は <strong>python.org</strong> からダウンロード＆インストール。バージョン 3.x であれば動作します。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h3>コマンドプロンプト（またはターミナル）を開く</h3>
+          <p>Windows の場合は「スタートメニュー → コマンドプロンプト」または「PowerShell」を開きます。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h3>以下のコマンドを入力して Enter を押す</h3>
+          <div class="run-box">
+            <span class="comment"># task_manager.py があるフォルダに移動してから実行</span><br>
+            <span class="cmd">python task_manager.py</span>
+          </div>
+          <div class="tip">
+            <div class="tip-icon">💡</div>
+            <div><strong>ヒント：</strong>追加でインストールが必要なライブラリはありません。Python 標準の機能だけで動きます！</div>
+          </div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <h3>ウィンドウが開いたら完成！</h3>
+          <p>アプリのウィンドウが表示されればすぐに使い始められます。データは自動的に保存されます。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== SCREEN LAYOUT ========== -->
+<div class="band screen-band">
+  <div class="wrap">
+    <span class="section-label lbl-teal">🖥️ 画面の見方</span>
+    <h2>シンプルな 3 エリア構成</h2>
+    <p class="section-desc">ツールバー・サイドバー・タスク一覧の3つで構成されています。</p>
+
+    <!-- 実物スクリーンショット -->
+    <div class="screenshot-wrap">
+      <div class="screenshot-bar">
+        <span class="sc-dot sc-red"></span>
+        <span class="sc-dot sc-yellow"></span>
+        <span class="sc-dot sc-green"></span>
+        <span class="sc-title">タスク管理アプリ — 実際の画面</span>
+      </div>
+      <img
+        src="screenshot.png"
+        alt="タスク管理アプリの実際の画面"
+        class="screenshot-img"
+      />
+    </div>
+
+    <!-- Legend -->
+    <div class="mockup-legend">
+      <div class="legend-item">
+        <div class="legend-num n1">①</div>
+        <div>
+          <div class="legend-title">ツールバー</div>
+          <div class="legend-desc">タスク追加・検索・通知などのボタン</div>
+        </div>
+      </div>
+      <div class="legend-item">
+        <div class="legend-num n2">②</div>
+        <div>
+          <div class="legend-title">サイドバー</div>
+          <div class="legend-desc">カテゴリ絞り込みと統計表示</div>
+        </div>
+      </div>
+      <div class="legend-item">
+        <div class="legend-num n3">③</div>
+        <div>
+          <div class="legend-title">タスク一覧</div>
+          <div class="legend-desc">タスクが一覧表示されるメインエリア</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tip" style="margin-top: 28px;">
+      <div class="tip-icon">💡</div>
+      <div>
+        <strong>操作のコツ：</strong>
+        タスクの行を<strong>クリック</strong>すると選択、<strong>ダブルクリック</strong>すると編集画面が開きます。
+        ヘッダーの「ID」や「期限」などをクリックすると並び替えができます。
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== FEATURE CARDS ========== -->
+<div class="band cards-band">
+  <div class="wrap">
+    <span class="section-label lbl-pink">✨ 機能一覧</span>
+    <h2>充実した 8 つの機能</h2>
+    <p class="section-desc">シンプルながら、チームでも個人でも使いやすい機能を揃えました。</p>
+    <div class="cards">
+      <div class="card">
+        <div class="card-icon-wrap">➕</div>
+        <h3>タスクの追加・編集・削除</h3>
+        <p>「＋ 新規タスク」ボタンで新しいタスクを作成。タイトル・カテゴリ・担当者・期限などを入力できます。</p>
+      </div>
+      <div class="card">
+        <div class="card-icon-wrap">🏷️</div>
+        <h3>カテゴリ & タグ</h3>
+        <p>「仕事」「個人」「学習」などカテゴリで分類。さらにタグ（例：#急ぎ）でグループ化できます。</p>
+      </div>
+      <div class="card">
+        <div class="card-icon-wrap">👥</div>
+        <h3>担当者の割り当て</h3>
+        <p>チームメンバーを登録して各タスクに担当者を設定。誰が何をやるか一目でわかります。</p>
+      </div>
+      <div class="card">
+        <div class="card-icon-wrap">🌲</div>
+        <h3>サブタスク</h3>
+        <p>大きなタスクを小さなタスクに分割できます。親タスクには進捗（例: 2/5）が表示されます。</p>
+      </div>
+      <div class="card">
+        <div class="card-icon-wrap">⏰</div>
+        <h3>リマインダー</h3>
+        <p>期限の「15分前」「1時間前」「1日前」などを設定すると、ポップアップで通知してくれます。</p>
+      </div>
+      <div class="card">
+        <div class="card-icon-wrap">💬</div>
+        <h3>コメント</h3>
+        <p>タスクにコメントを書き込めます。誰がいつ書いたか自動記録されるので進捗共有に便利。</p>
+      </div>
+      <div class="card">
+        <div class="card-icon-wrap">🔔</div>
+        <h3>通知センター</h3>
+        <p>タスクの作成・更新・担当変更などの履歴を一覧表示。未読件数がバッジで表示されます。</p>
+      </div>
+      <div class="card">
+        <div class="card-icon-wrap">🔍</div>
+        <h3>絞り込み検索</h3>
+        <p>キーワード・カテゴリ・担当者・状態などで表示するタスクを絞り込めます。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== STATUS & PRIORITY (dark) ========== -->
+<div class="band status-band">
+  <div class="wrap">
+    <span class="section-label lbl-white">🚦 ステータス & 優先度</span>
+    <h2>2種類の分類でタスクを管理</h2>
+    <p class="section-desc">状態と優先度を組み合わせて、今何をすべきか一目でわかります。</p>
+
+    <div class="status-grid">
+      <div>
+        <div class="sub-title">ステータス（3種類）</div>
+        <div class="status-list">
+          <div class="status-item">
+            <div class="s-icon s-todo">⏸</div>
+            <div>
+              <div class="s-label">未対応</div>
+              <div class="s-desc">まだ手をつけていない</div>
+            </div>
+          </div>
+          <div class="status-item">
+            <div class="s-icon s-wip">▶</div>
+            <div>
+              <div class="s-label">処理中</div>
+              <div class="s-desc">今まさに取り組んでいる</div>
+            </div>
+          </div>
+          <div class="status-item">
+            <div class="s-icon s-done">✓</div>
+            <div>
+              <div class="s-label">完了</div>
+              <div class="s-desc">終わった！</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="sub-title">優先度（3段階）</div>
+        <div class="pri-list">
+          <div class="pri-item pri-high">
+            <div class="pri-left">
+              <div class="pri-badge">高</div>
+              <div>
+                <div class="pri-name">高優先度</div>
+                <div class="pri-desc">急いで対応が必要</div>
+              </div>
+            </div>
+            <span style="font-size:1.4rem;">🔴</span>
+          </div>
+          <div class="pri-item pri-mid">
+            <div class="pri-left">
+              <div class="pri-badge">中</div>
+              <div>
+                <div class="pri-name">中優先度</div>
+                <div class="pri-desc">通常の優先度</div>
+              </div>
+            </div>
+            <span style="font-size:1.4rem;">🟡</span>
+          </div>
+          <div class="pri-item pri-low">
+            <div class="pri-left">
+              <div class="pri-badge">低</div>
+              <div>
+                <div class="pri-name">低優先度</div>
+                <div class="pri-desc">時間があるときに</div>
+              </div>
+            </div>
+            <span style="font-size:1.4rem;">🟢</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== DATA ========== -->
+<div class="band data-band">
+  <div class="wrap">
+    <span class="section-label lbl-green">💾 データ管理</span>
+    <h2>データはどこに保存される？</h2>
+    <p class="section-desc">アプリを終了してもデータは自動保存。バックアップも簡単です。</p>
+
+    <table class="file-table">
+      <thead>
+        <tr><th>ファイル</th><th>何が入っている？</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>data/tm_tasks.json</code></td>
+          <td>タスク一覧（タイトル・状態・期限・コメントなど）</td>
+        </tr>
+        <tr>
+          <td><code>data/tm_categories.json</code></td>
+          <td>カテゴリ一覧</td>
+        </tr>
+        <tr>
+          <td><code>data/tm_assignees.json</code></td>
+          <td>担当者一覧</td>
+        </tr>
+        <tr>
+          <td><code>data/tm_notifications.json</code></td>
+          <td>通知履歴</td>
+        </tr>
+        <tr>
+          <td><code>data/tm_counter.json</code></td>
+          <td>タスク ID カウンター</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="tip">
+      <div class="tip-icon">💡</div>
+      <div><strong>バックアップ方法：</strong><code>data/</code> フォルダごとコピーするだけでデータをバックアップできます。JSON ファイルなのでテキストエディターでも中身を確認できます！</div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== FAQ ========== -->
+<div class="band faq-band">
+  <div class="wrap">
+    <span class="section-label lbl-purple">❓ よくある質問</span>
+    <h2>FAQ</h2>
+    <p class="section-desc">気になることはこちらで解決！</p>
+    <div class="faq">
+      <div class="faq-item">
+        <div class="faq-q">Q. 追加でインストールが必要なものはありますか？</div>
+        <p class="faq-a">A. いいえ、Python 3 があれば OK です。追加ライブラリのインストールは不要です。</p>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Q. データはインターネットに送られますか？</div>
+        <p class="faq-a">A. いいえ、すべてのデータはあなたのパソコン内にのみ保存されます。完全オフラインで動作します。</p>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Q. 削除したタスクは元に戻せますか？</div>
+        <p class="faq-a">A. 削除前に確認ダイアログが表示されますが、削除後は元に戻せません。大切なデータは <code>data/tm_tasks.db</code> をバックアップしておきましょう。</p>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Q. 何人まで担当者を登録できますか？</div>
+        <p class="faq-a">A. 上限はありません。「👥 担当者管理」ボタンから何人でも追加できます。</p>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Q. スマートフォンでも使えますか？</div>
+        <p class="faq-a">A. このアプリはパソコン（Windows / macOS / Linux）専用です。スマートフォンには対応していません。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== FOOTER ========== -->
+<footer>
+  <span class="footer-emoji">📋</span>
+  <strong>タスク管理アプリ</strong><br>
+  Python / Tkinter 製デスクトップアプリ<br>
+  <span style="font-size:.82rem; opacity:.6; margin-top: 8px; display: block;">
+    ファイル: Challenge_app/task_manager.py
+  </span>
+</footer>
+
+</body>
+</html>
