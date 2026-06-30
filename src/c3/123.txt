@@ -1,6 +1,0 @@
-﻿
-python func-waribiki.py
-
-def hoge(): pass
-
-print(hoge())

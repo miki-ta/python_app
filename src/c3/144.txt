@@ -1,2 +1,0 @@
-﻿
-python for-test.py
