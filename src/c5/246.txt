@@ -1,2 +1,0 @@
-﻿
-python cifar10-train.py
