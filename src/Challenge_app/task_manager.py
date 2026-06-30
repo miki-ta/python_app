@@ -45,6 +45,7 @@ CATS_FILE      = DATA_DIR / "tm_categories.json"
 ASSIGNEES_FILE = DATA_DIR / "tm_assignees.json"
 COUNTER_FILE   = DATA_DIR / "tm_counter.json"
 NOTIFS_FILE    = DATA_DIR / "tm_notifications.json"
+_DB_FILE       = DATA_DIR / "tm_tasks.db"   # 旧 SQLite（移行元）
 
 DEFAULT_CATEGORIES = [
     Category("仕事",   "#4472C4"),
@@ -88,6 +89,74 @@ def init_db():
         _save_json(TASKS_FILE, [])
     if not NOTIFS_FILE.exists():
         _save_json(NOTIFS_FILE, [])
+    _migrate_from_sqlite()
+
+
+def _migrate_from_sqlite():
+    """旧 SQLite DB が存在し JSON がまだ空の場合に一度だけ移行する。"""
+    if not _DB_FILE.exists():
+        return
+    if _load_json(TASKS_FILE, []):
+        return  # JSON にすでにデータあり → スキップ
+    try:
+        import sqlite3
+        conn = sqlite3.connect(str(_DB_FILE))
+        conn.row_factory = sqlite3.Row
+
+        # タスク移行
+        tasks = []
+        for r in conn.execute("SELECT * FROM tasks ORDER BY task_id").fetchall():
+            tasks.append({
+                "task_id":          r["task_id"],
+                "title":            r["title"],
+                "category":         r["category"],
+                "tags":             _json.loads(r["tags"] or "[]"),
+                "assignee":         r["assignee"],
+                "status":           r["status"],
+                "priority":         r["priority"],
+                "start_date":       r["start_date"],
+                "due_date":         r["due_date"],
+                "memo":             r["memo"],
+                "reminder_minutes": r["reminder_minutes"],
+                "created_at":       r["created_at"],
+                "reminded":         bool(r["reminded"]),
+                "parent_id":        r["parent_id"],
+                "comments":         _json.loads(r["comments"] or "[]"),
+            })
+        _save_json(TASKS_FILE, tasks)
+
+        # カウンター移行
+        row = conn.execute("SELECT value FROM counter WHERE id=1").fetchone()
+        _save_json(COUNTER_FILE, {"counter": row["value"] if row else 0})
+
+        # カテゴリ移行
+        cats = [{"name": r["name"], "color": r["color"]}
+                for r in conn.execute("SELECT name, color FROM categories").fetchall()]
+        if cats:
+            _save_json(CATS_FILE, cats)
+
+        # 担当者移行
+        assignees = [r["name"] for r in conn.execute("SELECT name FROM assignees ORDER BY rowid").fetchall()]
+        if assignees:
+            _save_json(ASSIGNEES_FILE, assignees)
+
+        # 通知移行
+        notifs = []
+        for r in conn.execute("SELECT * FROM notifications ORDER BY id").fetchall():
+            notifs.append({
+                "db_id":      r["id"],
+                "task_id":    r["task_id"],
+                "task_title": r["task_title"],
+                "message":    r["message"],
+                "assignee":   r["assignee"],
+                "timestamp":  r["timestamp"],
+                "read":       bool(r["is_read"]),
+            })
+        _save_json(NOTIFS_FILE, notifs)
+
+        conn.close()
+    except Exception:
+        pass
 
 
 def _dict_to_task(d) -> "Task":
@@ -160,11 +229,11 @@ def delete_tasks_by_ids(ids) -> bool:
         return False
 
 
-def next_task_counter() -> str:
+def next_task_counter() -> tuple:
     data = _load_json(COUNTER_FILE, {"counter": 0})
     n = data["counter"] + 1
     _save_json(COUNTER_FILE, {"counter": n})
-    return f"TASK-{n:03d}"
+    return n, f"TASK-{n:03d}"
 
 
 def load_categories() -> list:
@@ -1240,6 +1309,7 @@ class TaskManagerApp:
                 pct = done_count / total_count
             else:
                 progress_str = "-"
+                done_count = total_count = 0
                 pct = 0.0
 
             indent = "  └ " if is_child else ""
@@ -1341,7 +1411,7 @@ class TaskManagerApp:
     # ------------------------------------------------------------------ CRUD
 
     def add_task(self):
-        task_id = next_task_counter()
+        _, task_id = next_task_counter()
         cat_name = self.categories[0].name if self.categories else "その他"
         new_task = Task(
             task_id=task_id,
@@ -1422,7 +1492,7 @@ class TaskManagerApp:
             messagebox.showwarning("注意", "サブタスクにはサブタスクを追加できません（階層は1段階まで）")
             return
 
-        task_id = next_task_counter()
+        _, task_id = next_task_counter()
         new_task = Task(
             task_id=task_id,
             title="",
