@@ -1,5 +1,0 @@
-﻿
-import re
-pat = r"\d+"
-str = "This pen is 100yen."
-re.search(pat, str)

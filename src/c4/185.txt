@@ -1,2 +1,0 @@
-﻿
-python open-write-close.py

@@ -1,4 +1,0 @@
-﻿
-$ python re_pickup.py
-
-import re

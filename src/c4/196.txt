@@ -1,4 +1,0 @@
-﻿
-python findfile.py --name dice.py --desc
-
-python findfile.py --wild "*.py" --desc
