@@ -1,2 +1,0 @@
-﻿
-python pos-add.py
